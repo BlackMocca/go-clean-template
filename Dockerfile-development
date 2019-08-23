@@ -1,0 +1,20 @@
+FROM golang:1.13-rc-alpine AS builder
+
+RUN apk --no-cache add git
+ 
+ENV GO111MODULE=on
+
+RUN mkdir -p /go/src/app
+WORKDIR /go/src/app
+
+COPY go.mod .
+
+RUN go get -u gopkg.in/urfave/cli.v1@v1.20.0
+RUN go get github.com/codegangsta/gin
+RUN go mod tidy
+
+COPY . . 
+
+RUN go build -o ./tmp/app
+
+ENTRYPOINT gin --port 3000 -appPort 3001 --immediate --all run /go/src/tmp/app
