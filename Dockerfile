@@ -5,8 +5,8 @@ ENV GO111MODULE=on
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
 
-#COPY go.mod .
-#RUN go mod tidy
+COPY go.mod .
+RUN go mod tidy
 
 COPY . .
 

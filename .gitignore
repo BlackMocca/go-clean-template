@@ -14,3 +14,4 @@
 # Another
 go.sum
 .env
+tmp/*
