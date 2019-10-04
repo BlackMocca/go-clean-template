@@ -11,4 +11,4 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./main.go:/go/src/app/main.go
+      - .:/go/src/app

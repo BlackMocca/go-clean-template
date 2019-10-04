@@ -1,8 +1,9 @@
 FROM golang:1.13-rc-alpine AS builder
 
-RUN apk --no-cache add git
+RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
  
 ENV GO111MODULE=on
+ENV TZ=Asia/Bangkok
 
 RUN mkdir -p /go/src/app
 WORKDIR /go/src/app
@@ -13,7 +14,5 @@ RUN go get github.com/pilu/fresh
 RUN go mod tidy
 
 COPY . . 
-
-RUN go build -o ./tmp/app
 
 ENTRYPOINT fresh

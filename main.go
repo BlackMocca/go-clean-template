@@ -3,10 +3,15 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+func init() {
+	log.Println(time.Now())
+}
 
 func main() {
 	e := echo.New()
@@ -21,6 +26,6 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
-	log.Println("odsad")
+
 	e.Logger.Fatal(e.Start(":3000"))
 }
