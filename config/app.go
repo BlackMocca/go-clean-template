@@ -1,6 +1,7 @@
 package config
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
@@ -8,17 +9,21 @@ import (
 )
 
 type Config struct {
-	Viper *viper.Viper
+	Viper    *viper.Viper
+	PsqlConn *sql.DB
 }
 
 func NewConfig() *Config {
 	v := viper.New()
 	v.SetConfigName(".env")
 	v.AddConfigPath(".")
-
 	loadEnvConfig(v)
 
-	return &Config{v}
+	/* Loading Other Config */
+
+	return &Config{
+		Viper: v,
+	}
 }
 
 func loadEnvConfig(v *viper.Viper) {
