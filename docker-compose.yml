@@ -6,7 +6,7 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile-development
-    container_name: go-clean-template
+    container_name: app
     env_file: .env
     ports:
       - 3000:3000
