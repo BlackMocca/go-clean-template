@@ -25,9 +25,12 @@ services:
     container_name: psql_db
     networks: 
       - dbservice
+    ports:
+      - 5432:5432
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB_PROD=app_example
       - POSTGRES_DB_DEVELOPMENT=app_example_development
       - POSTGRES_DB_TEST=app_example_test
 
