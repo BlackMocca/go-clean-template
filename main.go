@@ -1,16 +1,19 @@
 package main
 
 import (
-	"log"
 	"net/http"
-	"time"
 
+	_conf "github.com/BlackMocca/go-clean-template/config"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
+var (
+	Config *_conf.Config
+)
+
 func init() {
-	log.Println(time.Now())
+	Config = _conf.NewConfig()
 }
 
 func main() {
@@ -27,5 +30,6 @@ func main() {
 		return c.String(http.StatusOK, "Hello, World!")
 	})
 
-	e.Logger.Fatal(e.Start(":3000"))
+	port := ":" + Config.GetEnv("PORT", "3000")
+	e.Logger.Fatal(e.Start(port))
 }
