@@ -3,9 +3,9 @@ package main
 import (
 	"net/http"
 
-	_conf "github.com/BlackMocca/go-clean-template/config"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_conf "gitlab.com/km/go-kafka-playground/config"
 )
 
 var (
