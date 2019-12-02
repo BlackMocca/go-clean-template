@@ -1,47 +1,32 @@
 package config
 
 import (
-	"database/sql"
-	"fmt"
 	"os"
 
-	"github.com/spf13/viper"
+	"github.com/go-pg/pg/v9"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Viper    *viper.Viper
-	PsqlConn *sql.DB
+	PGORM *pg.DB
+}
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		panic("No .env file found")
+	}
 }
 
 func NewConfig() *Config {
-	v := viper.New()
-	v.SetConfigName(".env")
-	v.AddConfigPath(".")
-	loadEnvConfig(v)
-
-	/* Loading Other Config */
-
 	return &Config{
-		Viper: v,
+		PGORM: NewPsqlConnection(),
 	}
-}
-
-func loadEnvConfig(v *viper.Viper) {
-	if _, err := os.Stat(".env"); os.IsNotExist(err) {
-		panic(".env file does not exist")
-	}
-
-	file, _ := os.Open(".env")
-	err := v.ReadConfig(file)
-	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %s \n", err))
-	}
-
 }
 
 func (c *Config) GetEnv(key string, defaultValue string) string {
-	if has := c.Viper.IsSet(key); has {
-		return c.Viper.GetString(key)
+	if value, exists := os.LookupEnv(key); exists {
+		return value
 	}
+
 	return defaultValue
 }

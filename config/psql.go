@@ -1,16 +1,23 @@
 package config
 
 import (
-	"database/sql"
+	"log"
+	"os"
 
-	"github.com/spf13/viper"
+	"github.com/go-pg/pg/v9"
+	_ "github.com/lib/pq"
 )
 
-func (c *Config) NewConnectPsql(*viper.Viper) *sql.DB {
-	connStr := "postgres://postgres:postgres@localhost/pqgotest?sslmode=false"
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		panic(err)
+func NewPsqlConnection() *pg.DB {
+	PsqlConnectionStr, has := os.LookupEnv("PSQL_DATABASE_URL")
+	if !has {
+		log.Fatal("PSQL_DATABASE_URL on env not found")
 	}
+	option, err := pg.ParseURL(PsqlConnectionStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db := pg.Connect(option)
+
 	return db
 }
