@@ -32,10 +32,10 @@ app.migration.create:
 	docker exec -it $(app_name) migrate create -ext $(db_driver) -dir database/migrations -seq create_$(table)_table
 
 app.migration.up:
-	docker exec -it $(app_name) migrate -database $(db_url) -path database/migrations up
+	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations up
 
 app.migration.fix:
-	docker exec -it $(app_name) migrate -database $(db_url) -path database/migrations force $(version)
+	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations force $(version)
 
 app.migration.down:
-	docker exec -it $(app_name) migrate -database $(db_url) -path database/migrations down
+	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations down
