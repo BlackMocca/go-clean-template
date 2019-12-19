@@ -1,4 +1,4 @@
-module gitlab.com/km/go-kafka-playground
+module github.com/BlackMocca/go-clean-template
 
 go 1.12
 

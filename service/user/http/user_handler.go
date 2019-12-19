@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"gitlab.com/km/go-kafka-playground/middleware"
-	"gitlab.com/km/go-kafka-playground/service/user"
+	"github.com/BlackMocca/go-clean-template/middleware"
+	"github.com/BlackMocca/go-clean-template/service/user"
 )
 
 type userHandler struct {

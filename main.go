@@ -3,14 +3,14 @@ package main
 import (
 	"net/http"
 
+	_conf "github.com/BlackMocca/go-clean-template/config"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	_conf "gitlab.com/km/go-kafka-playground/config"
 
-	myMiddL "gitlab.com/km/go-kafka-playground/middleware"
-	_user_handler "gitlab.com/km/go-kafka-playground/service/user/http"
-	_user_repository "gitlab.com/km/go-kafka-playground/service/user/repository"
-	_user_usecase "gitlab.com/km/go-kafka-playground/service/user/usecase"
+	myMiddL "github.com/BlackMocca/go-clean-template/middleware"
+	_user_handler "github.com/BlackMocca/go-clean-template/service/user/http"
+	_user_repository "github.com/BlackMocca/go-clean-template/service/user/repository"
+	_user_usecase "github.com/BlackMocca/go-clean-template/service/user/usecase"
 )
 
 var (

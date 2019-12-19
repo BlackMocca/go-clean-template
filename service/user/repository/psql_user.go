@@ -2,7 +2,7 @@ package repository
 
 import (
 	"github.com/go-pg/pg/v9"
-	"gitlab.com/km/go-kafka-playground/service/user"
+	"github.com/BlackMocca/go-clean-template/service/user"
 )
 
 type psqlUserRepository struct {

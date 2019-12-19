@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	helper "gitlab.com/km/go-kafka-playground/helper/json"
+	helper "github.com/BlackMocca/go-clean-template/helper/json"
 )
 
 // GoMiddleware represent the data-struct for middleware

@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"gitlab.com/km/go-kafka-playground/service/user"
+	"github.com/BlackMocca/go-clean-template/service/user"
 )
 
 type userUsecase struct {
