@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	_conf "github.com/BlackMocca/go-clean-template/config"
@@ -11,17 +12,21 @@ import (
 	_user_handler "github.com/BlackMocca/go-clean-template/service/user/http"
 	_user_repository "github.com/BlackMocca/go-clean-template/service/user/repository"
 	_user_usecase "github.com/BlackMocca/go-clean-template/service/user/usecase"
+	"github.com/jmoiron/sqlx"
 )
 
-var (
-	Config *_conf.Config
-)
-
-func init() {
-	Config = _conf.NewConfig()
+func sqlDB() *sqlx.DB {
+	var connstr = _conf.GetEnv("PSQL_DATABASE_URL", "postgres://postgres:postgres@psql_db:5432/app_example?sslmode=disable")
+	db, err := _conf.NewPsqlConnection(connstr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return db
 }
 
 func main() {
+	psqlDB := sqlDB()
+
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, World!")
@@ -34,7 +39,7 @@ func main() {
 
 	/* Inject Repository */
 
-	userRepo := _user_repository.NewPsqlUserRepository(Config.PGORM)
+	userRepo := _user_repository.NewPsqlUserRepository(psqlDB)
 
 	/* Inject Usecase */
 
@@ -44,6 +49,6 @@ func main() {
 
 	_user_handler.NewUserHandler(e, middL, userUs)
 
-	port := ":" + Config.GetEnv("PORT", "3000")
+	port := ":" + _conf.GetEnv("PORT", "3000")
 	e.Logger.Fatal(e.Start(port))
 }
