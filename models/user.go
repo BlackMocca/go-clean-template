@@ -27,6 +27,8 @@ type User struct {
 	DeletedAt *models.Timestamp `json:"deleted_at" db:"deleted_at" type:"timestamp"`
 }
 
+type Users []*User
+
 func (u User) IsZero() bool {
 	if u.DeletedAt != nil {
 		return true

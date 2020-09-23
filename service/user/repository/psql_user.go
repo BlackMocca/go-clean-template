@@ -28,17 +28,51 @@ func (p psqlUserRepository) FetchAll() ([]*models.User, error) {
 	`,
 		models.UserSelector,
 	)
+
 	log.Println(sql)
+
 	rows, err := p.db.Queryx(sql)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	users, err := p.orm(rows, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return users, nil
+}
+
+func (p psqlUserRepository) FetchOneById(id int64) (*models.User, error) {
+	sql := fmt.Sprintf(`
+		SELECT 
+			%s
+		FROM users
+		WHERE users.id=%d
+	`,
+		models.UserSelector,
+		id,
+	)
+
+	log.Println(sql)
+
+	rows, err := p.db.Queryx(sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users, err := p.orm(rows, nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(users) > 0 {
+		return users[0], nil
+	}
+
+	return nil, nil
 }
 
 func (p psqlUserRepository) Create(user *models.User) error {
@@ -74,11 +108,10 @@ func (p psqlUserRepository) Create(user *models.User) error {
 
 func (p psqlUserRepository) orm(rows *sqlx.Rows, joinField []string) ([]*models.User, error) {
 	var users = make([]*models.User, 0)
-	// var err error
 
 	for rows.Next() {
 		var user = new(models.User)
-		user, err := orm.Orm(user, rows, joinField)
+		user, err := orm.OrmUser(user, rows, joinField)
 		if err != nil {
 			return nil, err
 		}

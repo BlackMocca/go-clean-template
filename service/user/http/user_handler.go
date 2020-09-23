@@ -1,7 +1,9 @@
 package http
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	helperModel "git.innovasive.co.th/backend/models"
@@ -20,6 +22,7 @@ func NewUserHandler(e *echo.Echo, middL *middleware.GoMiddleware, us user.UserUs
 		userUs: us,
 	}
 	e.GET("/users", handler.FetchAll)
+	e.GET("/users/:id", handler.FetchOneByUserId)
 	e.POST("/users", handler.Create)
 }
 
@@ -31,6 +34,26 @@ func (u *userHandler) FetchAll(c echo.Context) error {
 
 	responseData := map[string]interface{}{
 		"users": users,
+	}
+	return c.JSON(http.StatusOK, responseData)
+}
+
+func (u *userHandler) FetchOneByUserId(c echo.Context) error {
+	var userId, err = strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	user, err := u.userUs.FetchOneById(userId)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	if user == nil {
+		return echo.NewHTTPError(http.StatusNotFound, errors.New("not found").Error())
+	}
+
+	responseData := map[string]interface{}{
+		"user": user,
 	}
 	return c.JSON(http.StatusOK, responseData)
 }

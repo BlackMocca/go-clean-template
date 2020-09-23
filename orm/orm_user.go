@@ -8,7 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func Orm(model *models.User, rows *sqlx.Rows, relationFieldNames []string) (*models.User, error) {
+func OrmUser(model *models.User, rows *sqlx.Rows, relationFieldNames []string) (*models.User, error) {
 	orgTableName := GetTableName(model)
 
 	columns, err := rows.Columns()

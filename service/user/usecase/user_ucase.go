@@ -19,6 +19,10 @@ func (u userUsecase) FetchAll() ([]*models.User, error) {
 	return u.psqlUserRepo.FetchAll()
 }
 
+func (u userUsecase) FetchOneById(id int64) (*models.User, error) {
+	return u.psqlUserRepo.FetchOneById(id)
+}
+
 func (u userUsecase) Create(user *models.User) error {
 	return u.psqlUserRepo.Create(user)
 }
