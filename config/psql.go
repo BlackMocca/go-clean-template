@@ -1,16 +1,20 @@
 package config
 
 import (
-	"database/sql"
-
-	"github.com/spf13/viper"
+	"github.com/jmoiron/sqlx"
+	pg "github.com/lib/pq"
 )
 
-func (c *Config) NewConnectPsql(*viper.Viper) *sql.DB {
-	connStr := "postgres://postgres:postgres@localhost/pqgotest?sslmode=false"
-	db, err := sql.Open("postgres", connStr)
+func NewPsqlConnection(connectionStr string) (*sqlx.DB, error) {
+	addr, err := pg.ParseURL(connectionStr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return db
+
+	db, err := sqlx.Connect("postgres", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
