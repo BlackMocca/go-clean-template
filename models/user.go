@@ -2,6 +2,7 @@ package models
 
 import (
 	"git.innovasive.co.th/backend/models"
+	"github.com/gofrs/uuid"
 )
 
 const UserSelector = `
@@ -17,7 +18,7 @@ const UserSelector = `
 
 type User struct {
 	TableName struct{}          `json:"-" db:"users"`
-	ID        int64             `json:"id" db:"id" type:"int64"`
+	ID        *uuid.UUID        `json:"id" db:"id" type:"uuid"`
 	Email     string            `json:"email" db:"email" type:"string"`
 	Firstname string            `json:"firstname" db:"firstname" type:"string"`
 	Lastname  string            `json:"lastname" db:"lastname" type:"string"`
@@ -28,10 +29,3 @@ type User struct {
 }
 
 type Users []*User
-
-func (u User) IsZero() bool {
-	if u.DeletedAt != nil {
-		return true
-	}
-	return false
-}

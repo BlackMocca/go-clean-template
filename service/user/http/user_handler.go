@@ -4,10 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
-	helperModel "git.innovasive.co.th/backend/models"
-	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/service/user"
 	"github.com/labstack/echo/v4"
 )
@@ -55,21 +52,23 @@ func (u *userHandler) FetchOneByUserId(c echo.Context) error {
 }
 
 func (u *userHandler) Create(c echo.Context) error {
-	var user = new(models.User)
-	if err := c.Bind(user); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	t := helperModel.NewTimestampFromTime(time.Now())
+	var params = c.Get("params").(map[string]interface{})
 
-	user.CreatedAt = &t
-	user.UpdatedAt = &t
+	// var user = new(models.User)
+	// if err := c.Bind(user); err != nil {
+	// 	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	// }
+	// t := helperModel.NewTimestampFromTime(time.Now())
 
-	if err := u.userUs.Create(user); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
+	// user.CreatedAt = &t
+	// user.UpdatedAt = &t
+
+	// if err := u.userUs.Create(user); err != nil {
+	// 	return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	// }
 
 	responseData := map[string]interface{}{
-		"user": user,
+		"user": params,
 	}
 	return c.JSON(http.StatusOK, responseData)
 }

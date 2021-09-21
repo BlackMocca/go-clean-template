@@ -38,9 +38,5 @@ func OrmUser(model *models.User, rows *sqlx.Rows, relationFieldNames []string) (
 		}
 	}
 
-	if model.IsZero() {
-		return nil, nil
-	}
-
 	return model, nil
 }

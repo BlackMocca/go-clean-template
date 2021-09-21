@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 
 	"github.com/joncalhoun/qson"
@@ -87,14 +88,25 @@ func Form(c echo.Context) error {
 			bu, _ := qson.ToJSON(url.Values(form.Value).Encode())
 			json.Unmarshal(bu, &data)
 
+			data, err = parseOnKeyData(data)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+			}
+
 			/* รูปสำหรับ ใช้งานทั่วไป */
 			if val, ok := form.File["files"]; ok {
 				c.Set("files", val)
 			}
 		} else if strings.ToLower(contentType) == echo.MIMEApplicationJSON {
+			var err error
 			if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
 			}
+			data, err = parseOnKeyData(data)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+			}
+
 		} else {
 			postForm, err := c.FormParams()
 			if err != nil {
@@ -109,7 +121,10 @@ func Form(c echo.Context) error {
 				bu, _ := qson.ToJSON(postForm.Encode())
 				json.Unmarshal(bu, &data)
 			}
-
+			data, err = parseOnKeyData(data)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+			}
 		}
 	}
 
@@ -117,4 +132,25 @@ func Form(c echo.Context) error {
 		c.Set("params", data)
 	}
 	return nil
+}
+
+func parseOnKeyData(data map[string]interface{}) (map[string]interface{}, error) {
+	if data != nil && len(data) == 1 {
+		/*
+			support on data from json format
+		*/
+		if v, ok := data["data"]; ok {
+			valueType := reflect.ValueOf(v).Kind()
+			if valueType == reflect.Map {
+				data = v.(map[string]interface{})
+			} else if valueType == reflect.String {
+				data = map[string]interface{}{}
+				if err := json.Unmarshal([]byte(v.(string)), &data); err != nil {
+					return data, err
+				}
+			}
+		}
+	}
+
+	return data, nil
 }
