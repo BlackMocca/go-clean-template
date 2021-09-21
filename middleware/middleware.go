@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -107,7 +108,7 @@ func Form(c echo.Context) error {
 				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
 			}
 
-		} else {
+		} else if strings.ToLower(contentType) == echo.MIMEApplicationForm {
 			postForm, err := c.FormParams()
 			if err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
@@ -125,6 +126,12 @@ func Form(c echo.Context) error {
 			if err != nil {
 				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
 			}
+		} else {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Content-Type must be in (%s)", strings.Join([]string{
+				echo.MIMEApplicationJSON,
+				echo.MIMEApplicationForm,
+				echo.MIMEMultipartForm,
+			}, `','`)))
 		}
 	}
 

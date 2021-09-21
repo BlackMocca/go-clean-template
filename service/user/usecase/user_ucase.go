@@ -6,10 +6,10 @@ import (
 )
 
 type userUsecase struct {
-	psqlUserRepo user.PsqlUserRepositoryInf
+	psqlUserRepo user.UserRepository
 }
 
-func NewUserUsecase(uRepo user.PsqlUserRepositoryInf) user.UserUsecaseInf {
+func NewUserUsecase(uRepo user.UserRepository) user.UserUsecase {
 	return &userUsecase{
 		psqlUserRepo: uRepo,
 	}

@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 
 	"git.innovasive.co.th/backend/psql"
+	"github.com/BlackMocca/go-clean-template/constants"
 	myHelper "github.com/BlackMocca/go-clean-template/helper"
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/orm"
@@ -15,7 +17,7 @@ type psqlUserRepository struct {
 	db *psql.Client
 }
 
-func NewPsqlUserRepository(dbcon *psql.Client) user.PsqlUserRepositoryInf {
+func NewPsqlUserRepository(dbcon *psql.Client) user.UserRepository {
 	return &psqlUserRepository{
 		db: dbcon,
 	}
@@ -81,9 +83,10 @@ func (p psqlUserRepository) Create(user *models.User) error {
 	if err != nil {
 		return err
 	}
+
 	sql := `
 		INSERT INTO users(id,email,firstname,lastname,age,created_at,updated_at,deleted_at)
-		VALUES (nextval('users_id_seq'), $1::text, $2::text, $3::text, $4::numeric, $5::timestamp, $6::timestamp, NULL)
+		VALUES ($1::uuid, $2::text, $3::text, $4::text, $5::numeric, $6::timestamp, $7::timestamp, NULL)
 	`
 
 	myHelper.Println(sql)
@@ -95,6 +98,7 @@ func (p psqlUserRepository) Create(user *models.User) error {
 	defer stmt.Close()
 
 	_, err = stmt.Exec(
+		user.Id,
 		user.Email,
 		user.Firstname,
 		user.Lastname,
@@ -103,6 +107,9 @@ func (p psqlUserRepository) Create(user *models.User) error {
 		user.UpdatedAt,
 	)
 	if err != nil {
+		if err.Error() == constants.ERROR_DUPLICATE_EMAIL {
+			return errors.New(constants.ERROR_DUPLICATE_EMAIL_MESSAGE)
+		}
 		return err
 	}
 

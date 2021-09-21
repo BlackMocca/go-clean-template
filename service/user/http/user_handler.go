@@ -4,16 +4,20 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
+	helperModel "git.innovasive.co.th/backend/models"
+	"github.com/BlackMocca/go-clean-template/constants"
+	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/service/user"
 	"github.com/labstack/echo/v4"
 )
 
 type userHandler struct {
-	userUs user.UserUsecaseInf
+	userUs user.UserUsecase
 }
 
-func NewUserHandler(e *echo.Echo, us user.UserUsecaseInf) user.UserHandler {
+func NewUserHandler(e *echo.Echo, us user.UserUsecase) user.UserHandler {
 	return &userHandler{
 		userUs: us,
 	}
@@ -53,22 +57,22 @@ func (u *userHandler) FetchOneByUserId(c echo.Context) error {
 
 func (u *userHandler) Create(c echo.Context) error {
 	var params = c.Get("params").(map[string]interface{})
+	var t = helperModel.NewTimestampFromTime(time.Now())
 
-	// var user = new(models.User)
-	// if err := c.Bind(user); err != nil {
-	// 	return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	// }
-	// t := helperModel.NewTimestampFromTime(time.Now())
+	user := models.NewUserWithParams(params, nil)
+	user.GenUUID()
+	user.CreatedAt = &t
+	user.UpdatedAt = &t
 
-	// user.CreatedAt = &t
-	// user.UpdatedAt = &t
-
-	// if err := u.userUs.Create(user); err != nil {
-	// 	return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	// }
+	if err := u.userUs.Create(user); err != nil {
+		if err.Error() == constants.ERROR_DUPLICATE_EMAIL_MESSAGE {
+			return echo.NewHTTPError(http.StatusConflict, err.Error())
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
 
 	responseData := map[string]interface{}{
-		"user": params,
+		"user": user,
 	}
 	return c.JSON(http.StatusOK, responseData)
 }

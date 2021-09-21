@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cast"
 
+	helperMiddl "git.innovasive.co.th/backend/helper/middleware"
+	helperRoute "git.innovasive.co.th/backend/helper/route"
 	myMiddL "github.com/BlackMocca/go-clean-template/middleware"
 	"github.com/BlackMocca/go-clean-template/route"
 	_user_handler "github.com/BlackMocca/go-clean-template/service/user/http"
@@ -48,6 +50,8 @@ func main() {
 	})
 
 	e := echo.New()
+	e.HTTPErrorHandler = helperMiddl.SentryCapture(e)
+	helperRoute.RegisterVersion(e)
 	if APP_LOGGER {
 		e.Use(echoMiddL.Logger())
 	}
