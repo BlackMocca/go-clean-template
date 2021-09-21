@@ -1,41 +1,41 @@
-app_name=app
-port=3000
-expose=3000
+service=go-clean-template
 db_driver=postgres
+path=migrations/database/postgres
+version=latest
 
-dev.serve:
-	docker-compose up $(app_name)
+app.dev.up:
+	docker-compose up 
 
-dev.down:
-	docker-compose down 
-
-prod.build:
-	docker build ./ -t $(app_name)
-
-prod.run:
-	docker run --rm --name $(app_name) -p $(port):$(expose) -d $(app_name) 
-
-prod.down:
-	docker stop $(app_name)
-
-prod.serve:
-	make prod.build app_name=$(app_name)
-	make prod.run app_name=$(app_name) port=$(port) expose=$(expose)
+app.dev.down:
+	docker-compose down
 
 install-migration:
-	docker exec -it $(app_name) sh -c "wget https://github.com/golang-migrate/migrate/releases/download/v4.6.2/migrate.linux-amd64.tar.gz"
-	docker exec -it $(app_name) sh -c "tar xf migrate.linux-amd64.tar.gz"
-	docker exec -it $(app_name) mv migrate.linux-amd64 /go/bin/migrate
-	docker exec -it $(app_name) rm -f migrate.linux-amd64.tar.gz
+	docker exec -it $(service) sh -c "wget https://github.com/BlackMocca/migrate/releases/download/v5.0/migrate.linux-amd64"
+	docker exec -it $(service) sh -c "chmod +x migrate.linux-amd64"
+	docker exec -it $(service) mv migrate.linux-amd64 /usr/local/bin/migrate
 
 app.migration.create:
-	docker exec -it $(app_name) migrate create -ext $(db_driver) -dir database/migrations -seq create_$(table)_table
+	docker exec -it $(service) migrate create -ext $(db_driver) -dir $(path) -seq create_$(table)_table
 
 app.migration.up:
-	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations up
+	docker exec -it $(service) migrate -database $(db_url)  -path $(path) up
 
 app.migration.fix:
-	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations force $(version)
+	docker exec -it $(service) migrate -database $(db_url)  -path $(path) force $(version)
 
 app.migration.down:
-	docker exec -it $(app_name) migrate -database "$(db_url)" -path database/migrations down
+	docker exec -it $(service) migrate -database $(db_url)  -path $(path) down
+
+app.migration.seed:
+	docker exec -it $(service) migrate -database $(db_url)  -path $(path)/seed/master seed-up
+
+mockery:
+	mockery --all --dir service/$(service) --output service/$(service)/mocks
+
+test:
+	go test ./... -coverprofile cover.out
+	go tool cover -html=cover.out -o coverage.html
+	export unit_total=$$(go test ./... -v  | grep -c RUN) && echo "Unit Test Total: $$unit_total" && export coverage_total=$$(go tool cover -func cover.out | grep total | awk '{print $$3}') && echo "Coverage Total: $$coverage_total"
+
+
+

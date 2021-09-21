@@ -15,7 +15,7 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - .:/go/src/app
+      - .:/go/src/github.com/Blackmocca/go-clean-template
   
   psql_db:
     build:

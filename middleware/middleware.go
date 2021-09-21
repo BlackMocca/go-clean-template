@@ -1,63 +1,120 @@
 package middleware
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/joncalhoun/qson"
 	"github.com/labstack/echo/v4"
-	helper "github.com/BlackMocca/go-clean-template/helper/json"
 )
+
+const (
+	MiddleWareJWT = "jwt"
+)
+
+type GoMiddlewareInf interface {
+	InitContextIfNotExists(next echo.HandlerFunc) echo.HandlerFunc
+	InputForm(next echo.HandlerFunc) echo.HandlerFunc
+	IsAuthorization(next echo.HandlerFunc) echo.HandlerFunc
+	SetPayload(next echo.HandlerFunc) echo.HandlerFunc
+	ValidateParamId(key string) echo.MiddlewareFunc
+	RequireQueryParam(key string) echo.MiddlewareFunc
+	ValidateRequiredHeader(key string) echo.MiddlewareFunc
+}
 
 // GoMiddleware represent the data-struct for middleware
 type GoMiddleware struct {
 	// another stuff , may be needed by middleware
+	ctx       context.Context
+	jwtSecret string
 }
 
 func (m *GoMiddleware) InputForm(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		var data map[string]interface{}
-		reqMethod := c.Request().Method
-		Header := c.Request().Header
-
-		if reqMethod == http.MethodPost || reqMethod == http.MethodPut {
-			contentType := Header.Get("Content-Type")
-			if strings.Contains(contentType, echo.MIMEMultipartForm) {
-				form, err := c.MultipartForm()
-				if err != nil {
-					return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": http.ErrMissingBoundary.Error() + " or has not any parameter"})
-				}
-				if _, ok := form.Value["data"]; ok {
-					jsonData := helper.GetParamsFromJsonData(form.Value)
-					if jsonData == nil {
-						return c.JSON(http.StatusBadRequest, map[string]interface{}{"error": "Json parsing error"})
-					}
-					data = jsonData.(map[string]interface{})
-				}
-				/* รูปสำหรับ ใช้งานทั่วไป */
-				if val, ok := form.File["files"]; ok {
-					c.Set("files", val)
-				}
-			} else {
-				postForm, err := c.FormParams()
-				if err != nil {
-					return c.JSON(http.StatusBadRequest, err.Error())
-				}
-				if len(postForm) > 0 {
-					jsonData := helper.GetParamsFromJsonData(postForm)
-					if jsonData == nil {
-						return c.JSON(http.StatusBadRequest, map[string]interface{}{"message": "Json parsing error"})
-					}
-					data = jsonData.(map[string]interface{})
-				}
+		if err := Form(c); err != nil {
+			var code int
+			var message interface{}
+			if he, ok := err.(*echo.HTTPError); ok {
+				code = he.Code
+				message = he.Message
 			}
+			return echo.NewHTTPError(code, message)
 		}
+		return next(c)
+	}
+}
 
-		c.Set("params", data)
+func (m *GoMiddleware) InitContextIfNotExists(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+		if ctx == nil {
+			bgCtx := context.Background()
+			newReq := c.Request().WithContext(bgCtx)
+
+			c.SetRequest(newReq)
+		}
 		return next(c)
 	}
 }
 
 // InitMiddleware intialize the middleware
-func InitMiddleware() *GoMiddleware {
-	return &GoMiddleware{}
+func InitMiddleware(key string) GoMiddlewareInf {
+	return &GoMiddleware{
+		ctx:       context.TODO(),
+		jwtSecret: key,
+	}
+}
+
+// InitMiddleware intialize the middleware
+
+func Form(c echo.Context) error {
+	var data = map[string]interface{}{}
+	reqMethod := c.Request().Method
+	Header := c.Request().Header
+
+	if reqMethod == http.MethodPost || reqMethod == http.MethodPut || reqMethod == http.MethodDelete {
+		contentType := Header.Get("Content-Type")
+		if strings.Contains(contentType, echo.MIMEMultipartForm) {
+			form, err := c.MultipartForm()
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": http.ErrMissingBoundary.Error() + " or has not any parameter"})
+			}
+			bu, _ := qson.ToJSON(url.Values(form.Value).Encode())
+			json.Unmarshal(bu, &data)
+
+			/* รูปสำหรับ ใช้งานทั่วไป */
+			if val, ok := form.File["files"]; ok {
+				c.Set("files", val)
+			}
+		} else if strings.ToLower(contentType) == echo.MIMEApplicationJSON {
+			if err := json.NewDecoder(c.Request().Body).Decode(&data); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+			}
+		} else {
+			postForm, err := c.FormParams()
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+			}
+			if reqMethod == http.MethodDelete {
+				buf := bytes.Buffer{}
+				io.Copy(&buf, c.Request().Body)
+				postForm, _ = url.ParseQuery(buf.String())
+			}
+			if len(postForm) > 0 {
+				bu, _ := qson.ToJSON(postForm.Encode())
+				json.Unmarshal(bu, &data)
+			}
+
+		}
+	}
+
+	if len(data) > 0 {
+		c.Set("params", data)
+	}
+	return nil
 }

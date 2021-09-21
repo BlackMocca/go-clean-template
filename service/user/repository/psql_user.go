@@ -2,8 +2,9 @@ package repository
 
 import (
 	"fmt"
-	"log"
 
+	"git.innovasive.co.th/backend/psql"
+	myHelper "github.com/BlackMocca/go-clean-template/helper"
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/orm"
 	"github.com/BlackMocca/go-clean-template/service/user"
@@ -11,10 +12,10 @@ import (
 )
 
 type psqlUserRepository struct {
-	db *sqlx.DB
+	db *psql.Client
 }
 
-func NewPsqlUserRepository(dbcon *sqlx.DB) user.PsqlUserRepositoryInf {
+func NewPsqlUserRepository(dbcon *psql.Client) user.PsqlUserRepositoryInf {
 	return &psqlUserRepository{
 		db: dbcon,
 	}
@@ -29,9 +30,9 @@ func (p psqlUserRepository) FetchAll() ([]*models.User, error) {
 		models.UserSelector,
 	)
 
-	log.Println(sql)
+	myHelper.Println(sql)
 
-	rows, err := p.db.Queryx(sql)
+	rows, err := p.db.GetClient().Queryx(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +57,9 @@ func (p psqlUserRepository) FetchOneById(id int64) (*models.User, error) {
 		id,
 	)
 
-	log.Println(sql)
+	myHelper.Println(sql)
 
-	rows, err := p.db.Queryx(sql)
+	rows, err := p.db.GetClient().Queryx(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (p psqlUserRepository) FetchOneById(id int64) (*models.User, error) {
 }
 
 func (p psqlUserRepository) Create(user *models.User) error {
-	tx, err := p.db.Begin()
+	tx, err := p.db.GetClient().Begin()
 	if err != nil {
 		return err
 	}
@@ -84,6 +85,8 @@ func (p psqlUserRepository) Create(user *models.User) error {
 		INSERT INTO users(id,email,firstname,lastname,age,created_at,updated_at,deleted_at)
 		VALUES (nextval('users_id_seq'), $1::text, $2::text, $3::text, $4::numeric, $5::timestamp, $6::timestamp, NULL)
 	`
+
+	myHelper.Println(sql)
 
 	stmt, err := tx.Prepare(sql)
 	if err != nil {
