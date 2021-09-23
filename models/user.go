@@ -10,17 +10,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-const UserSelector = `
-		users.id			"users.id",
-		users.email			"users.email",
-		users.firstname		"users.firstname",
-		users.lastname 		"users.lastname",
-		users.age			"users.age",
-		users.user_type_id	"users.user_type_id",
-		users.created_at	"users.created_at",
-		users.updated_at 	"users.updated_at",
-		users.deleted_at	"users.deleted_at"
-`
+const FIELD_FK_USER_TYPE = "UserType"
 
 type User struct {
 	TableName  struct{}          `json:"-" db:"users" pk:"Id"`
@@ -33,6 +23,8 @@ type User struct {
 	CreatedAt  *models.Timestamp `json:"created_at" db:"created_at" type:"timestamp"`
 	UpdatedAt  *models.Timestamp `json:"updated_at" db:"updated_at" type:"timestamp"`
 	DeletedAt  *models.Timestamp `json:"deleted_at" db:"deleted_at" type:"timestamp"`
+
+	UserType *UserType `json:"user_type" db:"-" fk:"relation:one,fk_field1:UserTypeId,fk_field2:Id"`
 }
 
 type Users []*User

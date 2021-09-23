@@ -1,9 +1,9 @@
 package http
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	helperModel "git.innovasive.co.th/backend/models"
@@ -24,9 +24,20 @@ func NewUserHandler(e *echo.Echo, us user.UserUsecase) user.UserHandler {
 }
 
 func (u *userHandler) FetchAll(c echo.Context) error {
-	users, err := u.userUs.FetchAll()
+	var args = new(sync.Map)
+	var userTypeId = c.QueryParam("user_type_id")
+
+	if userTypeId != "" {
+		args.Store("user_type_id", userTypeId)
+	}
+
+	users, err := u.userUs.FetchAll(args)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if len(users) == 0 {
+		return echo.NewHTTPError(http.StatusNoContent)
 	}
 
 	responseData := map[string]interface{}{
@@ -46,7 +57,7 @@ func (u *userHandler) FetchOneByUserId(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	if user == nil {
-		return echo.NewHTTPError(http.StatusNotFound, errors.New("not found").Error())
+		return echo.NewHTTPError(http.StatusNoContent)
 	}
 
 	responseData := map[string]interface{}{

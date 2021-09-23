@@ -1,6 +1,8 @@
 package orm
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -26,7 +28,70 @@ const (
 	typeZeroString = "zerostring"
 	typeZeroInt    = "zeroint"
 	typeZeroFloat  = "zerofloat"
+	typeZeroBool   = "zerobool"
+	typeDuration   = "duration"
+	typeBool       = "bool"
+
+	relationONE  = "one"
+	relationMANY = "many"
+
+	ERROR_NO_FIND_PK       = "can not file pk tag on field TableName"
+	ERROR_NO_FIND_RELATION = "can not find relation on tag fk"
 )
+
+var (
+	patternSelector = func(tablename string, fieldDB string) string {
+		return fmt.Sprintf(`%s.%s "%s.%s"`, tablename, fieldDB, tablename, fieldDB)
+	}
+)
+
+func IsDuplicateByPK(modelsSlice interface{}, model interface{}) (bool, error) {
+	sliceMapItem := make([]reflect.Value, 0)
+	if reflect.TypeOf(modelsSlice).Kind() == reflect.Slice {
+		if reflect.ValueOf(modelsSlice).Len() > 0 {
+			for i := 0; i < reflect.ValueOf(modelsSlice).Len(); i++ {
+				m := reflect.ValueOf(modelsSlice).Index(i).Elem()
+				sliceMapItem = append(sliceMapItem, m)
+			}
+		}
+	}
+
+	if len(sliceMapItem) > 0 {
+		var fieldPrimaryKey = GetPK(model)
+		var existsPKFieldAmount = len(fieldPrimaryKey)
+		if existsPKFieldAmount == 0 {
+			return false, errors.New(ERROR_NO_FIND_PK)
+		}
+
+		for _, value := range sliceMapItem {
+			var checkPKAmount int
+			for _, pkField := range fieldPrimaryKey {
+				field := value.FieldByName(pkField)
+				var pkDataInSlice string
+				if field.Kind() == reflect.Ptr || field.Kind() == reflect.Interface {
+					pkDataInSlice = cast.ToString(field.Elem().Interface())
+				} else {
+					pkDataInSlice = cast.ToString(field.Interface())
+				}
+
+				var newmodelPKData string
+				var modelfield = reflect.ValueOf(model)
+				if modelfield.Kind() == reflect.Ptr || modelfield.Kind() == reflect.Interface {
+					newmodelPKData = cast.ToString(modelfield.Elem().FieldByName(pkField).Interface())
+				} else {
+					newmodelPKData = cast.ToString(modelfield.FieldByName(pkField).Interface())
+				}
+				if pkDataInSlice == newmodelPKData {
+					checkPKAmount++
+				}
+			}
+			if checkPKAmount == existsPKFieldAmount {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
 
 func GetValueFromTag(model interface{}, field string, tag string) string {
 	var tagVal string
@@ -62,6 +127,37 @@ func GetTableName(models interface{}) string {
 	}
 
 	return tablename
+}
+
+func GetPK(models interface{}) []string {
+	var pks = make([]string, 0)
+	faith := structs.New(models)
+
+	if f, ok := faith.FieldOk("TableName"); ok {
+		pks = strings.Split(f.Tag("pk"), ",")
+	}
+
+	return pks
+}
+
+func GetSelector(models interface{}) string {
+	faith := structs.New(models)
+	fields := faith.Fields()
+	tablename := GetTableName(models)
+	var selectors = make([]string, 0)
+
+	if len(fields) > 0 {
+		for _, field := range fields {
+			if field.Name() != "TableName" {
+				columename := field.Tag("db")
+				if columename != "" && columename != "-" {
+					selectors = append(selectors, patternSelector(tablename, columename))
+				}
+			}
+		}
+	}
+
+	return strings.Join(selectors, ",")
 }
 
 func SetFieldFromType(field *structs.Field, v interface{}) error {
@@ -100,9 +196,9 @@ func SetFieldFromType(field *structs.Field, v interface{}) error {
 			field.Set(valInt)
 		}
 	case typeInt64:
-		valInt64, err := strconv.ParseInt(value, 10, 64)
+		valInt, err := strconv.ParseInt(value, 10, 64)
 		if err == nil {
-			field.Set(valInt64)
+			field.Set(valInt)
 		}
 	case typeFloat64:
 		f, err := strconv.ParseFloat(value, 64)
@@ -133,21 +229,41 @@ func SetFieldFromType(field *structs.Field, v interface{}) error {
 		} else {
 			zeroInt = zero.IntFrom(0)
 		}
-
 		field.Set(zeroInt)
 	case typeZeroFloat:
 		valFloat, _ := strconv.ParseFloat(value, 64)
 		zeroFloat := zero.FloatFrom(valFloat)
 		field.Set(zeroFloat)
+	case typeZeroBool:
+		b, _ := strconv.ParseBool(value)
+		field.Set(zero.BoolFrom(b))
+	case typeDuration:
+		duration := fmt.Sprintf("%sh", value)
+		d, err := time.ParseDuration(duration)
+		if err != nil {
+			return err
+		}
+		field.Set(d)
+
+	case typeBool:
+		val, _ := strconv.ParseBool(value)
+		field.Set(val)
 	}
 	return nil
+}
+
+func isNil(val interface{}) bool {
+	if val == nil || (reflect.ValueOf(val).Kind() == reflect.Ptr && reflect.ValueOf(val).IsNil()) {
+		return true
+	}
+	return false
 }
 
 /*
 	Equal Value if a same type
 */
 func equal(typeVal string, x interface{}, y interface{}) bool {
-	if x != nil && y != nil {
+	if !isNil(x) && !isNil(y) {
 		switch typeVal {
 		case typeUUID:
 			return x.(*uuid.UUID).String() == y.(*uuid.UUID).String()
@@ -193,4 +309,27 @@ func getFKTag(tag string) *sync.Map {
 	}
 
 	return &m
+}
+
+func fillValue(ptr interface{}, currentRow RowValue) (interface{}, error) {
+	schTableName := GetTableName(ptr)
+
+	columns := currentRow.Columns()
+
+	_, ptrColumnMap := GetStructFields(ptr)
+
+
+	values := currentRow.Values()
+	if len(values) > 0 {
+		for index, col := range columns {
+			orderCol := strings.ReplaceAll(col, schTableName+".", "")
+			if field, ok := ptrColumnMap.Load(orderCol); ok {
+				if err := SetFieldFromType(field.(*structs.Field), values[index]); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	
+	return ptr, nil
 }

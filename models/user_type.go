@@ -5,7 +5,7 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-type UserTypeId struct {
+type UserType struct {
 	TableName struct{}          `json:"-" db:"user_types" pk:"Id"`
 	Id        *uuid.UUID        `json:"id" db:"id" type:"uuid"`
 	Name      string            `json:"name" db:"name" type:"string"`

@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"sync"
+
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/service/user"
 )
@@ -15,8 +17,8 @@ func NewUserUsecase(uRepo user.UserRepository) user.UserUsecase {
 	}
 }
 
-func (u userUsecase) FetchAll() ([]*models.User, error) {
-	return u.psqlUserRepo.FetchAll()
+func (u userUsecase) FetchAll(args *sync.Map) ([]*models.User, error) {
+	return u.psqlUserRepo.FetchAll(args)
 }
 
 func (u userUsecase) FetchOneById(id int64) (*models.User, error) {
