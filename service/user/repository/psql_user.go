@@ -85,8 +85,8 @@ func (p psqlUserRepository) Create(user *models.User) error {
 	}
 
 	sql := `
-		INSERT INTO users(id,email,firstname,lastname,age,created_at,updated_at,deleted_at)
-		VALUES ($1::uuid, $2::text, $3::text, $4::text, $5::numeric, $6::timestamp, $7::timestamp, NULL)
+		INSERT INTO users(id,email,firstname,lastname,age, user_type_id ,created_at,updated_at,deleted_at)
+		VALUES ($1::uuid, $2::text, $3::text, $4::text, $5::numeric, $6::uuid, $7::timestamp, $8::timestamp, NULL)
 	`
 
 	myHelper.Println(sql)
@@ -103,6 +103,7 @@ func (p psqlUserRepository) Create(user *models.User) error {
 		user.Firstname,
 		user.Lastname,
 		user.Age,
+		user.UserTypeId,
 		user.CreatedAt,
 		user.UpdatedAt,
 	)

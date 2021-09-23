@@ -4,8 +4,16 @@ CREATE TABLE IF NOT EXISTS users(
    "firstname" VARCHAR(255) NOT NULL,
    "lastname" VARCHAR(255) NOT NULL,
    "age" int NOT NULL,
+   "user_type_id" UUID NOT NULL,
    "created_at" TIMESTAMP DEFAULT NOW(),
    "updated_at" TIMESTAMP DEFAULT NOW(),
    "deleted_at" TIMESTAMP DEFAULT NULL,
    PRIMARY KEY (id)
 );
+
+ALTER TABLE users
+ADD CONSTRAINT USER_TYPE_ID
+FOREIGN KEY (user_type_id)
+REFERENCES user_types (id)
+ON UPDATE CASCADE
+ON DELETE CASCADE;

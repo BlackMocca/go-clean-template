@@ -16,21 +16,23 @@ const UserSelector = `
 		users.firstname		"users.firstname",
 		users.lastname 		"users.lastname",
 		users.age			"users.age",
+		users.user_type_id	"users.user_type_id",
 		users.created_at	"users.created_at",
 		users.updated_at 	"users.updated_at",
 		users.deleted_at	"users.deleted_at"
 `
 
 type User struct {
-	TableName struct{}          `json:"-" db:"users"`
-	Id        *uuid.UUID        `json:"id" db:"id" type:"uuid"`
-	Email     string            `json:"email" db:"email" type:"string"`
-	Firstname string            `json:"firstname" db:"firstname" type:"string"`
-	Lastname  string            `json:"lastname" db:"lastname" type:"string"`
-	Age       int               `json:"age" db:"age" type:"int32"`
-	CreatedAt *models.Timestamp `json:"created_at" db:"created_at" type:"timestamp"`
-	UpdatedAt *models.Timestamp `json:"updated_at" db:"updated_at" type:"timestamp"`
-	DeletedAt *models.Timestamp `json:"deleted_at" db:"deleted_at" type:"timestamp"`
+	TableName  struct{}          `json:"-" db:"users" pk:"Id"`
+	Id         *uuid.UUID        `json:"id" db:"id" type:"uuid"`
+	Email      string            `json:"email" db:"email" type:"string"`
+	Firstname  string            `json:"firstname" db:"firstname" type:"string"`
+	Lastname   string            `json:"lastname" db:"lastname" type:"string"`
+	Age        int               `json:"age" db:"age" type:"int32"`
+	UserTypeId *uuid.UUID        `json:"user_type_id" db:"user_type_id" type:"uuid"`
+	CreatedAt  *models.Timestamp `json:"created_at" db:"created_at" type:"timestamp"`
+	UpdatedAt  *models.Timestamp `json:"updated_at" db:"updated_at" type:"timestamp"`
+	DeletedAt  *models.Timestamp `json:"deleted_at" db:"deleted_at" type:"timestamp"`
 }
 
 type Users []*User
@@ -52,6 +54,8 @@ func NewUserWithParams(params map[string]interface{}, ptr *User) *User {
 			ptr.Lastname = cast.ToString(v)
 		case "age":
 			ptr.Age = cast.ToInt(v)
+		case "user_type_id":
+			ptr.UserTypeId, _ = helper.ConvertToUUIDAndBinary(v)
 		case "created_at":
 			if reflect.ValueOf(v).Kind() == reflect.String {
 				ht := models.NewTimestampFromString(cast.ToString(v))
