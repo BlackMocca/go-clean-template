@@ -104,6 +104,7 @@ func (e *E2eTestSuite) SetupSuite() {
 		panic(err)
 	}
 
+	time.Sleep(time.Duration(2 * time.Second))
 	/* connect db */
 	psqlURL := postgresMigrateURI(postgresUser, postgresPassword, host, port.Port(), postgressDatabase)
 	psqlDB, err := psql.NewPsqlConnection(psqlURL)
