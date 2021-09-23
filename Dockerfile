@@ -1,23 +1,32 @@
-FROM golang:1.13-rc-alpine AS builder
+FROM golang:1.16
 
-RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
+ARG app_name
+
+RUN mkdir -p /go/src/github.com/Blackmocca/go-clean-template
+WORKDIR /go/src/github.com/Blackmocca/go-clean-template
 
 ENV GO111MODULE=on
+ENV ADDR=0.0.0.0
+ENV TZ=Asia/Bangkok
 
-RUN mkdir -p /go/src/app
-WORKDIR /go/src/app
-
+# Copy app service 
 COPY go.mod .
-RUN go mod tidy
-
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o ./tmp/app
+RUN go mod tidy     
 
-FROM alpine:latest  
-COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /etc/passwd /etc/passwd
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o   /go/src/github.com/Blackmocca/go-clean-template/build/app main.go
 
-COPY --from=builder /go/src/app/tmp/app .
-CMD ["./app"] 
+FROM amd64/alpine:latest  
+RUN apk --no-cache add ca-certificates
+WORKDIR /usr/app
+
+COPY --from=0 /go/src/github.com/Blackmocca/go-clean-template/build/app .
+COPY --from=0 /go/src/github.com/Blackmocca/go-clean-template/assets assets
+COPY --from=0 /go/src/github.com/Blackmocca/go-clean-template/migrations migrations
+
+EXPOSE 3000
+EXPOSE 3100
+
+CMD ["./app"]  
+

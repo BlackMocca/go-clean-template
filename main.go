@@ -1,54 +1,37 @@
 package main
 
 import (
-	"log"
-	"net/http"
+	"git.innovasive.co.th/backend/psql"
 
-	_conf "github.com/BlackMocca/go-clean-template/config"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
-	myMiddL "github.com/BlackMocca/go-clean-template/middleware"
-	_user_handler "github.com/BlackMocca/go-clean-template/service/user/http"
-	_user_repository "github.com/BlackMocca/go-clean-template/service/user/repository"
-	_user_usecase "github.com/BlackMocca/go-clean-template/service/user/usecase"
-	"github.com/jmoiron/sqlx"
+	"github.com/BlackMocca/go-clean-template/config"
+	_ "github.com/BlackMocca/go-clean-template/integration"
+	"github.com/BlackMocca/go-clean-template/server"
 )
 
-func sqlDB() *sqlx.DB {
-	var connstr = _conf.GetEnv("PSQL_DATABASE_URL", "postgres://postgres:postgres@psql_db:5432/app_example?sslmode=disable")
-	db, err := _conf.NewPsqlConnection(connstr)
+func sqlDB(con string) *psql.Client {
+	db, err := psql.NewPsqlConnection(con)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return db
 }
 
+func GetMainServer() *server.Server {
+	psqlDB := sqlDB(config.PSQL_DATABASE_URL)
+
+	return &server.Server{
+		APP_LOGGER:   config.APP_LOGGER,
+		APP_PORT:     config.APP_PORT,
+		JWT_SECRET:   config.JWT_SECRET,
+		GRPC_PORT:    config.GRPC_PORT,
+		GRPC_TIMEOUT: config.GRPC_TIMEOUT,
+		SENTRY_DSN:   config.SENTRY_DSN,
+		PsqlDB:       psqlDB,
+	}
+}
+
 func main() {
-	psqlDB := sqlDB()
-
-	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Hello, World!")
-	})
-
-	middL := myMiddL.InitMiddleware()
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
-
-	/* Inject Repository */
-
-	userRepo := _user_repository.NewPsqlUserRepository(psqlDB)
-
-	/* Inject Usecase */
-
-	userUs := _user_usecase.NewUserUsecase(userRepo)
-
-	/* Inject Handler */
-
-	_user_handler.NewUserHandler(e, middL, userUs)
-
-	port := ":" + _conf.GetEnv("PORT", "3000")
-	e.Logger.Fatal(e.Start(port))
+	serv := GetMainServer()
+	defer serv.PsqlDB.GetClient().Close()
+	serv.Start()
 }
