@@ -1,18 +1,25 @@
-FROM golang:1.13-rc-alpine AS builder
+FROM golang:1.16
 
-RUN apk update && apk add --no-cache git ca-certificates tzdata && update-ca-certificates
- 
+ARG app_name
+
+RUN mkdir -p /go/src/github.com/Blackmocca/go-clean-template
+WORKDIR /go/src/github.com/Blackmocca/go-clean-template
+
 ENV GO111MODULE=on
+ENV ADDR=0.0.0.0
 ENV TZ=Asia/Bangkok
 
-RUN mkdir -p /go/src/app
-WORKDIR /go/src/app
 
-COPY go.mod .
-
-RUN go get github.com/pilu/fresh
-RUN go mod tidy
+# Move to project folder
+WORKDIR /go/src/github.com/Blackmocca/go-clean-template
 
 COPY . . 
+RUN go get -u github.com/githubnemo/CompileDaemon
+RUN go mod tidy     
 
-ENTRYPOINT fresh
+RUN  go build -o  /go/src/github.com/Blackmocca/go-clean-template/tmp/app main.go
+
+EXPOSE 3000
+EXPOSE 3100
+
+ENTRYPOINT CompileDaemon -include=go.mod -log-prefix=false -color=true -build="go build -o ./tmp/app main.go" -command="./tmp/app" 

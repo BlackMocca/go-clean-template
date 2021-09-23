@@ -1,35 +1,43 @@
 package http
 
 import (
-	"errors"
 	"net/http"
-	"strconv"
+	"sync"
 	"time"
 
 	helperModel "git.innovasive.co.th/backend/models"
-	"github.com/BlackMocca/go-clean-template/middleware"
+	"github.com/BlackMocca/go-clean-template/constants"
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/service/user"
+	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type userHandler struct {
-	userUs user.UserUsecaseInf
+	userUs user.UserUsecase
 }
 
-func NewUserHandler(e *echo.Echo, middL *middleware.GoMiddleware, us user.UserUsecaseInf) {
-	handler := &userHandler{
+func NewUserHandler(e *echo.Echo, us user.UserUsecase) user.UserHandler {
+	return &userHandler{
 		userUs: us,
 	}
-	e.GET("/users", handler.FetchAll)
-	e.GET("/users/:id", handler.FetchOneByUserId)
-	e.POST("/users", handler.Create)
 }
 
 func (u *userHandler) FetchAll(c echo.Context) error {
-	users, err := u.userUs.FetchAll()
+	var args = new(sync.Map)
+	var userTypeId = c.QueryParam("user_type_id")
+
+	if userTypeId != "" {
+		args.Store("user_type_id", userTypeId)
+	}
+
+	users, err := u.userUs.FetchAll(args)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if len(users) == 0 {
+		return echo.NewHTTPError(http.StatusNoContent)
 	}
 
 	responseData := map[string]interface{}{
@@ -39,17 +47,14 @@ func (u *userHandler) FetchAll(c echo.Context) error {
 }
 
 func (u *userHandler) FetchOneByUserId(c echo.Context) error {
-	var userId, err = strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
+	var userId = uuid.FromStringOrNil(c.Param("id"))
 
-	user, err := u.userUs.FetchOneById(userId)
+	user, err := u.userUs.FetchOneById(&userId)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	if user == nil {
-		return echo.NewHTTPError(http.StatusNotFound, errors.New("not found").Error())
+		return echo.NewHTTPError(http.StatusNoContent)
 	}
 
 	responseData := map[string]interface{}{
@@ -59,16 +64,18 @@ func (u *userHandler) FetchOneByUserId(c echo.Context) error {
 }
 
 func (u *userHandler) Create(c echo.Context) error {
-	var user = new(models.User)
-	if err := c.Bind(user); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	t := helperModel.NewTimestampFromTime(time.Now())
+	var params = c.Get("params").(map[string]interface{})
+	var t = helperModel.NewTimestampFromTime(time.Now())
 
+	user := models.NewUserWithParams(params, nil)
+	user.GenUUID()
 	user.CreatedAt = &t
 	user.UpdatedAt = &t
 
 	if err := u.userUs.Create(user); err != nil {
+		if err.Error() == constants.ERROR_DUPLICATE_EMAIL_MESSAGE {
+			return echo.NewHTTPError(http.StatusConflict, err.Error())
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
