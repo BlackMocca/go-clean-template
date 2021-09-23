@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/BlackMocca/go-clean-template/constants"
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/service/user"
+	"github.com/gofrs/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -47,12 +47,9 @@ func (u *userHandler) FetchAll(c echo.Context) error {
 }
 
 func (u *userHandler) FetchOneByUserId(c echo.Context) error {
-	var userId, err = strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
+	var userId = uuid.FromStringOrNil(c.Param("id"))
 
-	user, err := u.userUs.FetchOneById(userId)
+	user, err := u.userUs.FetchOneById(&userId)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

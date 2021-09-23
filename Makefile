@@ -39,6 +39,6 @@ test:
 
 test.integration:
 	go test ./integration -v -tags=integration
-# export integration_total=$$(go test ./integration -tags=integration | grep -c RUN) && echo "Intregation Test Total: $$integration_total"
+	export integration_total=$$(go test ./integration -tags=integration | grep -c RUN) && echo "Intregation Test Total: $$integration_total"
 
 

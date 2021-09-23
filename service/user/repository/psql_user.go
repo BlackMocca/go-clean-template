@@ -12,6 +12,7 @@ import (
 	"github.com/BlackMocca/go-clean-template/models"
 	"github.com/BlackMocca/go-clean-template/orm"
 	"github.com/BlackMocca/go-clean-template/service/user"
+	"github.com/gofrs/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/spf13/cast"
 )
@@ -76,19 +77,21 @@ func (p psqlUserRepository) FetchAll(args *sync.Map) ([]*models.User, error) {
 	return users, nil
 }
 
-func (p psqlUserRepository) FetchOneById(id int64) (*models.User, error) {
+func (p psqlUserRepository) FetchOneById(id *uuid.UUID) (*models.User, error) {
 	sql := fmt.Sprintf(`
 		SELECT 
+			%s,
 			%s
 		FROM users
 		JOIN
 			user_types
 		ON
 			users.user_type_id = user_types.id
-		WHERE users.id=%d
+		WHERE users.id::text = '%s'
 	`,
 		orm.GetSelector(models.User{}),
-		id,
+		orm.GetSelector(models.UserType{}),
+		id.String(),
 	)
 
 	myHelper.Println(sql)

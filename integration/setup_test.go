@@ -4,7 +4,6 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"testing"
@@ -46,9 +45,9 @@ var (
 
 var (
 	getStoryName = func(name string) string {
-		reg := regexp.MustCompile(`MIGRATE_STORY.+`)
+		reg := regexp.MustCompile(`MIGRATE_STORY_\d+`)
 		if reg.MatchString(name) {
-			return strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(reg.FindString(name)), "_", "-"), "MIGRATE_", "")
+			return strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(reg.FindString(name)), "_", "-"), "migrate-", "")
 		}
 		return ""
 	}
@@ -92,24 +91,24 @@ func (e *E2eTestSuite) SetupSuite() {
 		Started:          true,
 	})
 	if err != nil {
-		e.T().Error(err)
+		panic(err)
 	}
 
 	host, err := postgresC.Host(ctx)
 	if err != nil {
-		e.T().Error(err)
+		panic(err)
 	}
 
 	port, err := postgresC.MappedPort(ctx, nat.Port(postgresExposePort))
 	if err != nil {
-		e.T().Error(err)
+		panic(err)
 	}
 
 	/* connect db */
 	psqlURL := postgresMigrateURI(postgresUser, postgresPassword, host, port.Port(), postgressDatabase)
 	psqlDB, err := psql.NewPsqlConnection(psqlURL)
 	if err != nil {
-		e.T().Error(fmt.Errorf("fail to connection: %s", err.Error()))
+		panic(fmt.Errorf("fail to connection: %s", err.Error()))
 	}
 
 	serv := &server.Server{
@@ -157,7 +156,7 @@ func (e *E2eTestSuite) SetupTest() {
 	migrateDir = seedMasterMigrateDir
 	migrate = fmt.Sprintf(`migrate -database %s -path %s seed-up`, postgresMigrateURI(postgresUser, postgresPassword, host, postgresExposePort, postgressDatabase), migrateDir)
 	cmd = strings.Split(migrate, " ")
-	log.Println(migrate)
+	fmt.Println(migrate)
 	status, err = e.psqlDbContainer.Exec(context.Background(), cmd)
 	if err != nil {
 		e.T().Error(err)
@@ -206,6 +205,9 @@ func (e *E2eTestSuite) TearDownTest() {
 
 func (e *E2eTestSuite) BeforeTest(suiteName, testName string) {
 	/* seed data from test story */
+	fmt.Println()
+	fmt.Println("Starting Test Name: ", testName)
+	fmt.Println()
 	host, err := e.psqlDbContainer.Host(context.Background())
 	if err != nil {
 		e.T().Error(err)
@@ -213,6 +215,7 @@ func (e *E2eTestSuite) BeforeTest(suiteName, testName string) {
 
 	testName = getStoryName(testName)
 	if testName != "" {
+		fmt.Println("Start Seed Up on story", testName)
 		migrateDir := seedDataTestMigrateDir(testName)
 		migrate := fmt.Sprintf(`migrate -database %s -path %s seed-up`, postgresMigrateURI(postgresUser, postgresPassword, host, postgresExposePort, postgressDatabase), migrateDir)
 		cmd := strings.Split(migrate, " ")
@@ -240,6 +243,7 @@ func (e *E2eTestSuite) AfterTest(suiteName, testName string) {
 
 	testName = getStoryName(testName)
 	if testName != "" {
+		fmt.Println("Start Seed Down on story", testName)
 		migrateDir := seedDataTestMigrateDir(testName)
 		migrate := fmt.Sprintf(`migrate -database %s -path %s seed-down`, postgresMigrateURI(postgresUser, postgresPassword, host, postgresExposePort, postgressDatabase), migrateDir)
 		cmd := strings.Split(migrate, " ")
@@ -256,7 +260,3 @@ func (e *E2eTestSuite) AfterTest(suiteName, testName string) {
 		}
 	}
 }
-
-// func (e *E2eTestSuite) Test_STORY_EXAMPLE_002() {
-// 	assert.Equal(e.T(), "a", "a")
-// }
