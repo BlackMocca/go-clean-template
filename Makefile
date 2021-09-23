@@ -38,7 +38,7 @@ test:
 	export unit_total=$$(go test ./... -v  | grep -c RUN) && echo "Unit Test Total: $$unit_total" && export coverage_total=$$(go tool cover -func cover.out | grep total | awk '{print $$3}') && echo "Coverage Total: $$coverage_total"
 
 test.integration:
-	go test ./integration -v -tags=integration
-	export integration_total=$$(go test ./integration -tags=integration | grep -c RUN) && echo "Intregation Test Total: $$integration_total"
+	go test ./integration -v -tags=integration -json > integration_test.out
+	cat integration_test.out | go-test-report -o integration.html -t "$(service)"
 
 
