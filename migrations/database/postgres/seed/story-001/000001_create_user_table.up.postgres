@@ -1,4 +1,0 @@
-INSERT INTO "users" ("id", "email", "firstname", "lastname", "age", "user_type_id", "created_at", "updated_at", "deleted_at") VALUES
-('93a42c6c-d52b-42a6-a33e-31ab74b7c567',	'chaipon@gmail.com',	'Tawatchai',	'Monsombul',	24,	'8c22b186-ae36-481a-b06d-6fe7a3a48a77',	'2021-09-23 11:45:33',	'2021-09-23 11:45:33',	NULL),
-('782ca2c9-6a33-4c22-87a1-6b97f495cf0e',	'tanawat@gmail.com',	'Tanawat',	'Konkod',	24,	'8c22b186-ae36-481a-b06d-6fe7a3a48a77',	'2021-09-23 11:45:53',	'2021-09-23 11:45:53',	NULL),
-('3421dcb6-e1ee-498f-bb02-358bfadb11d8',	'Apisara@gmail.com',	'Apisara',	'Keawngam',	30,	'ac809526-f9b6-4c4e-a11d-92a3a3f3c117',	'2021-09-23 11:46:28',	'2021-09-23 11:46:28',	NULL);
