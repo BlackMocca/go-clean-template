@@ -1,0 +1,10 @@
+go.sum
+go-clean-template
+tmp/*
+.env
+
+.DS_Store
+cover.out
+coverage.html
+
+data/pgdata/*

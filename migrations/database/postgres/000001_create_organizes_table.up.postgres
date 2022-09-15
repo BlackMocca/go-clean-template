@@ -1,0 +1,16 @@
+DO $$
+BEGIN
+    CREATE TYPE ORG_TYPE AS ENUM ('PUBLIC', 'PRIVATE');
+END
+$$;
+
+CREATE TABLE IF NOT EXISTS organizes (
+    "id" uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
+    "name" character varying(255) NOT NULL,
+    "alias_name" character varying(255),
+    "org_type" ORG_TYPE NOT NULL DEFAULT 'PUBLIC',
+    "order_no" NUMERIC(10,0),
+    "created_at" timestamp NOT NULL,
+    "updated_at" timestamp NOT NULL,
+    "deleted_at" timestamp
+);

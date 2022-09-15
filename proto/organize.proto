@@ -1,0 +1,28 @@
+syntax = "proto3";
+option go_package="./proto_models";
+package proto;
+
+message DefaultRequest{}
+
+message OrganizeData {
+    string id = 1;
+    string name = 2;
+    string alias_name = 3;
+    string org_type = 4;
+    int64 order_no = 5;
+    string private_tel_no = 6;
+    string created_at = 7;
+    string updated_at = 8;
+}
+
+message FetchOrganizeByIdRequest{
+    string id = 1;
+}
+
+message FetchOrganizeByIdResponse {
+    OrganizeData organize = 1;
+}
+
+service Organize {
+    rpc FetchOrganizeById(FetchOrganizeByIdRequest) returns (FetchOrganizeByIdResponse) {}
+}

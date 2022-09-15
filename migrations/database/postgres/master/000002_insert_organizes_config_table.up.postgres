@@ -1,0 +1,5 @@
+INSERT INTO "organize_configs" ("organize_id", "config_key", "config_value") VALUES
+('f04d2065-8af6-4d4f-b4f8-fb9cdac6f70e','admin_1','1f66d3c9-a549-46de-9639-0f6ff6c8d7f3'),
+('f04d2065-8af6-4d4f-b4f8-fb9cdac6f70e','admin_2','2f66d3c9-3549-66de-9639-0f6ff6c8d15a'),
+('fc4246c9-c5f7-48f8-9094-058a79919ac6','admin_1','1f66d3c9-a549-46de-9639-0f6ff6c8d712'),
+('fc4246c9-c5f7-48f8-9094-058a79919ac6','admin_2','2f66d3c9-3549-66de-9639-0f6ff6c8d134');

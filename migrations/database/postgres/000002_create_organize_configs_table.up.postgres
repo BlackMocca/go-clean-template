@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS organize_configs (
+    "organize_id" uuid NOT NULL,
+    "config_key" VARCHAR(255) NOT NULL,
+    "config_value" TEXT NOT NULL
+);
+
+ALTER TABLE organize_configs
+ADD CONSTRAINT UNIQUE_ORGANIZE_CONFIG UNIQUE (organize_id, config_key);
+
+ALTER TABLE organize_configs
+ADD CONSTRAINT ORGANIZE_CONFIG_IDX
+FOREIGN KEY (organize_id)
+REFERENCES organizes (id)
+ON UPDATE CASCADE
+ON DELETE CASCADE;

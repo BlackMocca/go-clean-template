@@ -1,0 +1,49 @@
+version: "3"
+
+services: 
+
+  app:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile-development
+    container_name: app
+    env_file: .env
+    restart: always
+    networks: 
+      - default
+    depends_on: 
+      - psql_db
+    ports:
+      - 3000:3000
+      - 3100:3100
+    volumes:
+      - .:/go/src/github.com/Blackmocca/go-clean-template
+
+  psql_db:
+    image: postgres:14
+    container_name: psql_db
+    networks:
+      - default
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=organization
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=example
+      - PGDATA=/var/lib/postgresql/data/pgdata 
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    networks:
+      - default
+    ports:
+      - 8080:8080
+    
+  
+networks:
+  default:
+    external:
+      name: app

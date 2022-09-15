@@ -1,0 +1,6 @@
+package constants
+
+const (
+	ORGANIZE_TYPE_PUBLIC  = "PUBLIC"
+	ORGANIZE_TYPE_PRIVATE = "PRIVATE"
+)

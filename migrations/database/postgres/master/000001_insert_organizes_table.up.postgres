@@ -1,0 +1,3 @@
+INSERT INTO "organizes" ("id", "name", "alias_name", "org_type", "order_no", "created_at", "updated_at", "deleted_at") VALUES
+('f04d2065-8af6-4d4f-b4f8-fb9cdac6f70e',	'เทยเที่ยวไทยไกลทั่วโลก',	'ททท',	'PUBLIC',	0,	'2022-09-15 21:11:56',	'2022-09-15 21:11:56',	NULL),
+('fc4246c9-c5f7-48f8-9094-058a79919ac6',	'เจ๊แดงแคปหมู',	'เจ๊แดง',	'PUBLIC',	0,	'2022-09-15 21:14:03',	'2022-09-15 21:14:03',	NULL);
