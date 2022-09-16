@@ -112,7 +112,7 @@ func TestFetchAll_Success(t *testing.T) {
 	e.Use(middl.InitContextIfNotExists)
 	e.Use(middl.InputForm)
 	e.Use(middl.SetTracer)
-	req := httptest.NewRequest(http.MethodGet, "/v1/list/all", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizes", nil)
 	rec := httptest.NewRecorder()
 
 	handler := NewOrganizeHandler(organizeUs)
@@ -155,7 +155,7 @@ func TestFetchOneById_Success(t *testing.T) {
 	e.Use(middl.InitContextIfNotExists)
 	e.Use(middl.InputForm)
 	e.Use(middl.SetTracer)
-	req := httptest.NewRequest(http.MethodGet, "/v1/list/042e37e5-3027-4499-9a02-91ade81f2d67", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizes/042e37e5-3027-4499-9a02-91ade81f2d67", nil)
 	rec := httptest.NewRecorder()
 
 	handler := NewOrganizeHandler(organizeUs)
@@ -188,7 +188,7 @@ func TestFetchOneById_Error500(t *testing.T) {
 	e.Use(middl.InitContextIfNotExists)
 	e.Use(middl.InputForm)
 	e.Use(middl.SetTracer)
-	req := httptest.NewRequest(http.MethodGet, "/v1/list/042e37e5-3027-4499-9a02-91ade81f2d67", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizes/042e37e5-3027-4499-9a02-91ade81f2d67", nil)
 	rec := httptest.NewRecorder()
 
 	handler := NewOrganizeHandler(organizeUs)
@@ -455,7 +455,7 @@ func TestFetchAll_NO_CONTENT(t *testing.T) {
 	e.Use(middl.InitContextIfNotExists)
 	e.Use(middl.InputForm)
 	e.Use(middl.SetTracer)
-	req := httptest.NewRequest(http.MethodGet, "/v1/list/all", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/organizes", nil)
 	rec := httptest.NewRecorder()
 
 	handler := NewOrganizeHandler(organizeUs)

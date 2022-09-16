@@ -31,21 +31,21 @@ make install-migration migrate_url="https://github.com/BlackMocca/migrate/releas
 
 `Migrate table` from this script 
 ```script
-make app.migration.up db_url="$connectionstring_of_db" path=migrations/database/postgres
+make app.migration.up db_url="$connectionstring_of_db" path=migrations/database/postgres/organization
 ```
 example:
 ```
-make app.migration.up db_url="postgres://postgres:example@127.0.0.1:5432/organization?sslmode=disable" path=migrations/database/postgres
+make app.migration.up db_url="postgres://postgres:example@127.0.0.1:5432/organization?sslmode=disable" path=migrations/database/postgres/organization
 ```
 
 `Delete table` from this script 
 ```script
-make app.migration.down db_url="$connectionstring_of_db" path=migrations/database/postgres
+make app.migration.down db_url="$connectionstring_of_db" path=migrations/database/postgres/organization
 ```
 
 `Seed Data`:
 ```
-make app.migration.seed db_url="postgres://postgres:example@127.0.0.1:5432/organization?sslmode=disable" path=migrations/database/postgres/master
+make app.migration.seed db_url="postgres://postgres:example@127.0.0.1:5432/organization?sslmode=disable" path=migrations/database/postgres/organization/master
 ```
 
 note `if migrate fail you must delete table schema_migration or change version and set dirty is false`
