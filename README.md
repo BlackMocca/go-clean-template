@@ -1,6 +1,8 @@
 # go-clean-template
 
 ## Prepare running application
+### Installing proto
+follow link `https://medium.com/@titlebhoomtawathplinsut/%E0%B8%A1%E0%B8%B2%E0%B8%97%E0%B8%B3-grpc-service-%E0%B8%94%E0%B9%89%E0%B8%A7%E0%B8%A2-go-%E0%B8%81%E0%B8%B1%E0%B8%99-866d7452f5dd`
 ### Installing database 
 run with command
 ```script
