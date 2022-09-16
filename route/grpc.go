@@ -14,5 +14,5 @@ func NewGRPCRoute(server *grpc.Server) *GrpcRoute {
 }
 
 func (g GrpcRoute) RegisterOrganize(handler proto_models.OrganizeServer) {
-	// proto_models.RegisterOrganizeServer(g.server, handler)
+	proto_models.RegisterOrganizeServer(g.server, handler)
 }
