@@ -1,0 +1,7 @@
+# id.yaml — reusable path ID parameter
+name: id
+in: path
+required: true
+description: รหัสอ้างอิงหลัก (primary key)
+schema:
+  $ref: ../schemas/uuid.yaml

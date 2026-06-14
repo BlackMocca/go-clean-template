@@ -1,0 +1,548 @@
+openapi: 3.0.3
+info:
+  title: Example API (OpenAPI v3)
+  version: 1.0.0
+  description: OpenAPI spec example with one-file-per-operation pattern. Generated Echo server code + models using oapi-codegen.
+tags:
+  - name: public
+    description: does not any authentication
+  - name: Users
+    description: User management endpoints
+paths:
+  /api/health:
+    get:
+      operationId: HealthCheck
+      tags:
+        - Public
+      security: []
+      summary: ตรวจสอบสถานะของ API service
+      description: |
+        Endpoint สำหรับตรวจสอบว่า API ยังทำงานอยู่หรือไม่
+
+        - ใช้สำหรับ monitoring/heartbeat
+        - ไม่ต้องใช้ authentication
+        - Response ทันที (ไม่กระทบ performance)
+      responses:
+        '200':
+          description: Service กำลังทำงานปกติ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_success'
+  /api/v1/users:
+    get:
+      operationId: ListUsers
+      tags:
+        - Users
+      summary: ดึงรายการผู้ใช้ทั้งหมด
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/page_size'
+        - $ref: '#/components/parameters/search_word'
+        - $ref: '#/components/parameters/role'
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: รายการผู้ใช้ที่ถูกต้อง
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/list_users_success'
+        '204':
+          description: ไม่พบผู้ใช้ที่ระบุ
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '500':
+          description: Internal ServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+    post:
+      operationId: CreateUser
+      tags:
+        - Users
+      summary: สร้างผู้ใช้ใหม่
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_user_json_body'
+      responses:
+        '200':
+          description: สร้างผู้ใช้สำเร็จ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/create_user_success'
+        '400':
+          description: ข้อมูลไม่ถูกต้อง
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '409':
+          description: user email was duplicate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/create_user_email_duplicate'
+        '500':
+          description: Internal ServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+  /api/v1/users/{id}:
+    get:
+      operationId: GetUserById
+      tags:
+        - Users
+      summary: ดึงข้อมูลผู้ใช้ตาม ID
+      parameters:
+        - $ref: '#/components/parameters/document_id'
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: ข้อมูลผู้ใช้ที่ถูกต้อง
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_user_by_id_success'
+        '204':
+          description: ไม่พบผู้ใช้ที่ระบุ
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '500':
+          description: Internal ServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+    put:
+      operationId: UpdateUserById
+      tags:
+        - Users
+      summary: อัพเดทข้อมูลผู้ใช้
+      parameters:
+        - $ref: '#/components/parameters/document_id'
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/update_user_json_body'
+      responses:
+        '200':
+          description: อัพเดทสำเร็จ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/update_user_success'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '404':
+          description: ไม่พบผู้ใช้ที่ระบุ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '500':
+          description: Internal ServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+    delete:
+      operationId: DeleteUserById
+      tags:
+        - Users
+      summary: ลบผู้ใช้
+      parameters:
+        - $ref: '#/components/parameters/document_id'
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: ลบสำเร็จ
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '404':
+          description: ไม่พบผู้ใช้ที่ระบุ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+        '500':
+          description: Internal ServerError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/response_error'
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApplicationCode:
+      type: string
+      enum:
+        - C20000
+        - C40000
+        - C40100
+        - C40300
+        - C40400
+        - C50000
+        - C40901
+        - C40902
+      description: ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+      example: C20000
+      x-enum-varnames:
+        - ApplicationCodeSuccess
+        - ApplicationCodeBadRequestInvalidArgument
+        - ApplicationCodeUnAuthorize
+        - ApplicationCodeForbidden
+        - ApplicationCodeNotFound
+        - ApplicationInternalServerError
+        - ApplicationCodeConflictUserEmailWasDuplicate
+        - ApplicationCodeConflictUserAlreadyRemoved
+    response_success:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/ApplicationCode'
+        message:
+          type: string
+          description: Human-readable error message
+        data:
+          addtionalProperties: true
+          nullable: true
+          description: returned any data with the response
+    Role:
+      type: string
+      enum:
+        - admin
+        - user
+        - moderator
+      description: บทบาทของผู้ใช้ในระบบ
+      x-enum-varnames:
+        - RoleAdmin
+        - RoleUser
+        - RoleModerator
+    paginator:
+      type: object
+      required:
+        - page
+        - page_size
+        - total_documents
+        - total_page
+        - documents
+      properties:
+        page:
+          type: integer
+          x-omitempty: false
+          description: The current page number.
+        page_size:
+          type: integer
+          x-omitempty: false
+          description: The number of items per page.
+        total_documents:
+          type: integer
+          x-omitempty: false
+          description: The total number of items across all pages.
+        total_page:
+          type: integer
+          x-omitempty: false
+          description: The total number of pages available.
+        documents:
+          type: array
+          description: definition schemas
+          minItems: 0
+          nullable: true
+          items:
+            type: object
+    Status:
+      type: string
+      enum:
+        - active
+        - inactive
+        - pending
+      description: สถานะของ entity
+      x-enum-varnames:
+        - StatusActive
+        - StatusInactive
+        - StatusPending
+    timestamp:
+      type: string
+      x-omitempty: false
+      x-go-type-skip-optional-pointer: true
+      example: '2025-07-25 15:08:00'
+    permission:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          $ef: ../../global/components/schemas/uuid.yaml
+        name:
+          type: string
+          maxLength: 100
+          description: ชื่อสิทธิ์
+        created_at:
+          $ref: '#/components/schemas/timestamp'
+        updated_at:
+          $ref: '#/components/schemas/timestamp'
+    user:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - status
+        - role
+      properties:
+        id:
+          $ef: ../../global/components/schemas/uuid.yaml
+        email:
+          type: string
+          format: email
+          description: อีเมลสำหรับเข้าสู่ระบบ
+        name:
+          type: string
+          maxLength: 100
+          description: ชื่อ-นามสกุล
+        status:
+          $ref: '#/components/schemas/Status'
+        role:
+          $ref: '#/components/schemas/Role'
+        created_at:
+          $ref: '#/components/schemas/timestamp'
+        updated_at:
+          $ref: '#/components/schemas/timestamp'
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/permission'
+    list_users_success:
+      allOf:
+        - $ref: '#/components/schemas/response_success'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/paginator'
+                - type: object
+                  properties:
+                    documents:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/user'
+    ApplicationErrorType:
+      type: string
+      enum:
+        - invalid_arguments
+        - conflict
+        - internal_server_error
+        - notfound
+        - apikey_invalid
+        - token_expired
+        - token_secret_mismatch
+      description: ErrorType with same http status code and ApplicationCode
+      example: unknown
+      x-enum-varnames:
+        - ApplicationErrorInvalidArgument
+        - ApplicationErrorConflict
+        - ApplicationErrorInternalServerError
+        - ApplicationErrorNotFound
+        - ApplicationErrorApikeyInvalid
+        - ApplicationErrorTokenExpired
+        - ApplicationErrorTokenSecretMismatch
+    response_error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: '#/components/schemas/ApplicationCode'
+        error_type:
+          $ref: '#/components/schemas/ApplicationErrorType'
+        message:
+          type: string
+          description: Human-readable error message
+        data:
+          addtionalProperties: true
+          nullable: true
+          description: returned any data with the response
+    uuid:
+      type: string
+      format: uuid
+      x-omitempty: false
+      x-go-type: uuid.UUID
+      x-go-type-import:
+        path: github.com/google/uuid
+        name: uuid
+    create_user_json_body:
+      type: object
+      required:
+        - email
+        - name
+        - role
+        - permission_ids
+      properties:
+        email:
+          type: string
+          format: email
+          description: อีเมลสำหรับเข้าสู่ระบบ
+        name:
+          type: string
+          maxLength: 100
+          description: ชื่อ-นามสกุล
+        role:
+          $ref: '#/components/schemas/Role'
+        permission_ids:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/uuid'
+    create_user_success:
+      allOf:
+        - $ref: '#/components/schemas/response_success'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: '#/components/schemas/user'
+    create_user_email_duplicate:
+      allOf:
+        - $ref: '#/components/schemas/response_error'
+        - type: object
+          required:
+            - code
+          properties:
+            code:
+              $ref: '#/components/schemas/ApplicationCode'
+    get_user_by_id_success:
+      allOf:
+        - $ref: '#/components/schemas/response_success'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: '#/components/schemas/user'
+    update_user_json_body:
+      type: object
+      required:
+        - email
+        - name
+        - role
+        - permission_ids
+      properties:
+        email:
+          type: string
+          format: email
+          description: อีเมลสำหรับเข้าสู่ระบบ
+        name:
+          type: string
+          maxLength: 100
+          description: ชื่อ-นามสกุล
+        role:
+          $ref: '#/components/schemas/Role'
+        permission_ids:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/uuid'
+    update_user_success:
+      allOf:
+        - $ref: '#/components/schemas/response_success'
+        - type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: '#/components/schemas/user'
+  parameters:
+    page:
+      name: page
+      in: query
+      description: หน้าที่ต้องการ (เริ่มจาก 1)
+      required: true
+      schema:
+        type: integer
+        format: int32
+        default: 1
+    page_size:
+      name: page_size
+      in: query
+      description: จำนวนรายการต่อหน้า
+      required: true
+      schema:
+        type: integer
+        format: int32
+        default: 20
+        maximum: 100
+    search_word:
+      name: search_word
+      in: query
+      required: false
+      description: ค้นหาจากข้อความ
+      schema:
+        type: string
+    role:
+      name: role
+      in: query
+      required: false
+      description: filtering user from role
+      schema:
+        $ref: '#/components/schemas/Role'
+    document_id:
+      name: id
+      in: path
+      required: true
+      description: รหัสอ้างอิงหลัก (primary key)
+      schema:
+        $ref: '#/components/schemas/uuid'

@@ -1,0 +1,36 @@
+# update_user.yaml — PATCH /users/{id} (operation object only)
+operationId: UpdateUserById
+tags: [Users]
+summary: อัพเดทข้อมูลผู้ใช้
+parameters:
+  - $ref: '../../global/components/parameters/document_id.yaml'
+security:
+  - apiKeyAuth: []
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: './request/update_user_json_body.yaml'
+responses:
+  '200':
+    description: อัพเดทสำเร็จ
+    content:
+      application/json:
+        schema: 
+          $ref: './response/update_user_success.yaml'
+  '401':
+    description: Unauthorized
+    content:
+      application/json:
+        schema: { $ref: '../../global/components/schemas/response_error.yaml' }
+  '404':
+    description: ไม่พบผู้ใช้ที่ระบุ
+    content:
+      application/json:
+        schema: { $ref: '../../global/components/schemas/response_error.yaml' }
+  '500':
+    description: Internal ServerError
+    content:
+      application/json:
+        schema: { $ref: '../../global/components/schemas/response_error.yaml' }

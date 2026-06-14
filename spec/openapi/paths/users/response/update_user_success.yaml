@@ -1,0 +1,8 @@
+allOf:
+  - $ref: '../../../global/components/schemas/response_success.yaml'
+  - type: object
+    required:
+      - data
+    properties: 
+      data:
+        $ref: '../../../components/schemas/user.yaml'

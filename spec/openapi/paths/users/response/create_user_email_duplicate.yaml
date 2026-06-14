@@ -1,0 +1,8 @@
+allOf:
+  - $ref: '../../../global/components/schemas/response_error.yaml'
+  - type: object
+    required:
+      - code
+    properties:
+      code: 
+        $ref: '../../../enums.yaml#/components/schemas/ApplicationCode'

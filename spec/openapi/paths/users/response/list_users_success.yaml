@@ -1,0 +1,17 @@
+allOf:
+  - $ref: '../../../global/components/schemas/response_success.yaml'
+  - type: object
+    required:
+      - data
+    properties: 
+      data:
+        allOf:
+          - $ref: '../../../global/components/schemas/paginator.yaml'
+          - type: object
+            properties:
+              documents:
+                type: array
+                items:
+                  $ref: '../../../components/schemas/user.yaml'
+        
+        

@@ -1,0 +1,21 @@
+# GET /health — health_check.yaml
+# Health check endpoint (ไม่ต้องใช้ API key)
+
+operationId: HealthCheck
+tags: [Public]
+security: []  # ไม่ใช้ security (public endpoint)
+summary: ตรวจสอบสถานะของ API service
+description: |
+  Endpoint สำหรับตรวจสอบว่า API ยังทำงานอยู่หรือไม่
+  
+  - ใช้สำหรับ monitoring/heartbeat
+  - ไม่ต้องใช้ authentication
+  - Response ทันที (ไม่กระทบ performance)
+
+responses:
+  '200':
+    description: Service กำลังทำงานปกติ
+    content:
+      application/json:
+        schema:
+          $ref: '../../global/components/schemas/response_success.yaml'

@@ -1,0 +1,32 @@
+type: object
+required:
+  - page
+  - page_size
+  - total_documents
+  - total_page
+  - documents
+properties:
+  page:
+    type: integer
+    x-omitempty: false
+    description: The current page number.
+  page_size:
+    type: integer
+    x-omitempty: false
+    description: The number of items per page.
+  total_documents:
+    type: integer
+    x-omitempty: false
+    description: The total number of items across all pages.
+  total_page:
+    type: integer
+    x-omitempty: false
+    description: The total number of pages available.
+  documents:
+    type: array
+    description: definition schemas
+    minItems: 0
+    nullable: true
+    items:
+      type: object
+      

@@ -1,0 +1,1322 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>user: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">example/service/user/psql_repository.go (83.5%)</option>
+				
+				<option value="file1">example/service/user/usecase.go (100.0%)</option>
+				
+				<option value="file2">example/service/web/handlers.go (88.9%)</option>
+				
+				<option value="file3">example/service/web/server.gen.go (8.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package user provides a repository interface and in-memory implementation
+// for the example unit testing demonstration.
+package user
+
+import (
+        "context"
+        "example/models"
+        "fmt"
+        "strings"
+
+        "github.com/BlackMocca/utils/connectors/psql"
+        "github.com/google/uuid"
+        "github.com/guregu/null/v6/zero"
+        "github.com/jmoiron/sqlx"
+)
+
+type psqlRepository struct {
+        client *psql.Client
+}
+
+func NewPsqlRepository(client *psql.Client) Repository <span class="cov8" title="1">{
+        return &amp;psqlRepository{client: client}
+}</span>
+
+// FindByID retrieves a user by their unique ID. Returns an error if not found.
+func (p psqlRepository) FindByID(ctx context.Context, idOrEmail string) (*models.User, error) <span class="cov8" title="1">{
+        uid, _ := uuid.Parse(idOrEmail)
+        sql := `
+                SELECT 
+                        users.*,
+                        COALESCE(
+                                json_agg(row_to_json(permissions)) FILTER (WHERE permissions.id IS NOT NULL),
+                                '[]'::json
+                        ) AS permissions
+                FROM 
+                        users
+                LEFT JOIN
+                        user_permissions
+                ON
+                        users.id = user_permissions.user_id
+                LEFT JOIN
+                        permissions
+                ON
+                        permissions.id = user_permissions.permission_id
+                WHERE 
+                        users.deleted_at IS NULL
+                        AND
+                        (users.id = ? or users.email = ?)
+                GROUP BY users.id
+        ORDER BY users.id ASC
+        `
+        sql = sqlx.Rebind(sqlx.DOLLAR, sql)
+        stmt, err := p.client.GetClient().PreparexContext(ctx, sql)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer stmt.Close()
+
+        rows, err := stmt.Unsafe().QueryxContext(ctx, uid, idOrEmail)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">defer rows.Close()
+
+        users, err := p.orm(ctx, rows, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">if len(users) &gt; 0 </span><span class="cov8" title="1">{
+                return users[0], nil
+        }</span>
+
+        <span class="cov8" title="1">return nil, nil</span>
+}
+
+func (p psqlRepository) upsertUser(ctx context.Context, tx *sqlx.Tx, user *models.User) error <span class="cov8" title="1">{
+        sql := `
+                INSERT INTO users (id, name, email, role, created_at, updated_at, deleted_at)
+                VALUES (?, ?, ?, ?::user_role, ?,?, NULL)
+                ON CONFLICT (id)
+                DO UPDATE SET
+                        email = EXCLUDED.email,
+                        name = EXCLUDED.name,
+                        updated_at = EXCLUDED.updated_at;
+        `
+
+        sql = sqlx.Rebind(sqlx.DOLLAR, sql)
+        stmt, err := tx.PreparexContext(ctx, sql)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer stmt.Close()
+
+        _, merr := stmt.ExecContext(ctx,
+                user.ID,
+                user.Name,
+                user.Email,
+                user.Role,
+                user.CreatedAt,
+                user.UpdatedAt,
+        )
+        return merr</span>
+}
+
+func (p psqlRepository) deleteUserPermission(ctx context.Context, tx *sqlx.Tx, userId uuid.UUID) error <span class="cov8" title="1">{
+        sql := `
+                DELETE FROM user_permissions
+                WHERE
+                        user_id = ?
+        `
+
+        sql = sqlx.Rebind(sqlx.DOLLAR, sql)
+        stmt, err := tx.PreparexContext(ctx, sql)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer stmt.Close()
+
+        _, merr := stmt.ExecContext(ctx,
+                userId,
+        )
+        return merr</span>
+}
+
+func (p psqlRepository) insertPermissions(ctx context.Context, tx *sqlx.Tx, userId uuid.UUID, permissions []uuid.UUID) error <span class="cov8" title="1">{
+        sql := `
+                INSERT INTO user_permissions (user_id, permission_id)
+                VALUES (?, ?)
+        `
+
+        sql = sqlx.Rebind(sqlx.DOLLAR, sql)
+        stmt, err := tx.PreparexContext(ctx, sql)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer stmt.Close()
+
+        for _, permissionId := range permissions </span><span class="cov8" title="1">{
+                if _, err := stmt.ExecContext(ctx, userId, permissionId); err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Save persists a user to storage. If the user has no ID set (ID == 0),
+// the implementation auto-generates one.
+func (p psqlRepository) Save(ctx context.Context, user *models.User) error <span class="cov8" title="1">{
+        var tx, err = p.client.GetClient().Beginx()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer tx.Rollback()
+
+        if err := p.upsertUser(ctx, tx, user); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := p.deleteUserPermission(ctx, tx, user.ID); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if err := p.insertPermissions(ctx, tx, user.ID, models.Permissions(user.Permissions.Data()).GetIds()); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">return tx.Commit()</span>
+}
+
+// Delete removes a user by their ID. Returns an error if the user does not exist.
+func (p psqlRepository) Delete(ctx context.Context, id uuid.UUID) error <span class="cov8" title="1">{
+        var tx, err = p.client.GetClient().Beginx()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer tx.Rollback()
+
+        sql := `
+        UPDATE users
+        SET deleted_at = NOW()
+        WHERE id = ?
+        `
+
+        sql = sqlx.Rebind(sqlx.DOLLAR, sql)
+        stmt, err := tx.PreparexContext(ctx, sql)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">defer stmt.Close()
+
+        if _, merr := stmt.ExecContext(ctx, id); merr != nil </span><span class="cov0" title="0">{
+                return merr
+        }</span>
+
+        <span class="cov8" title="1">return tx.Commit()</span>
+}
+
+func (p psqlRepository) whereConds(params ListParams) ([]string, []any) <span class="cov8" title="1">{
+        var conds = []string{}
+        var vals = []any{}
+
+        if v := params.Searchword; v != "" </span><span class="cov8" title="1">{
+                sql := `users.email LIKE CONCAT('%', ?::text, '%')`
+                conds = append(conds, sql)
+                vals = append(vals, v)
+        }</span>
+
+        <span class="cov8" title="1">if v := params.Role; v.Valid() </span><span class="cov8" title="1">{
+                sql := `permissions.name = ?`
+                conds = append(conds, sql)
+                vals = append(vals, string(params.Role))
+        }</span>
+
+        <span class="cov8" title="1">return conds, vals</span>
+}
+
+// List returns all users currently stored. Never returns nil, may return an empty slice.
+func (p psqlRepository) List(ctx context.Context, params ListParams) (models.Paginator[[]*models.User], error) <span class="cov8" title="1">{
+        var paginator = models.Paginator[[]*models.User]{Page: params.Page, PageSize: params.PageSize}
+        var where string
+        var conds, vals = p.whereConds(params)
+        if len(conds) &gt; 0 </span><span class="cov8" title="1">{
+                where = " AND " + strings.Join(conds, " AND ")
+        }</span>
+
+        <span class="cov8" title="1">templateCountSQL := fmt.Sprintf(`
+                SELECT 
+                        COUNT(DISTINCT users.id) as total_documents
+                FROM 
+                        users
+                LEFT JOIN
+                        user_permissions
+                ON
+                        users.id = user_permissions.user_id
+                LEFT JOIN
+                        permissions
+                ON
+                        permissions.id = user_permissions.permission_id
+                WHERE 
+                        users.deleted_at IS NULL
+                        %s
+        `,
+                where,
+        )
+
+        templateDataSQL := fmt.Sprintf(`
+                SELECT 
+                        users.*,
+                        COALESCE(
+                                json_agg(row_to_json(permissions)) FILTER (WHERE permissions.id IS NOT NULL),
+                                '[]'::json
+                        ) AS permissions
+                FROM 
+                        users
+                LEFT JOIN
+                        user_permissions
+                ON
+                        users.id = user_permissions.user_id
+                LEFT JOIN
+                        permissions
+                ON
+                        permissions.id = user_permissions.permission_id
+                WHERE 
+                        users.deleted_at IS NULL
+                        %s
+                GROUP BY users.id
+                LIMIT %d
+                OFFSET %d
+        `,
+                where,
+                paginator.Limit(),
+                paginator.Offset(),
+        )
+
+        var execute = func(ctx context.Context, query string) (models.Paginator[[]*models.User], error) </span><span class="cov8" title="1">{
+                query = sqlx.Rebind(sqlx.DOLLAR, query)
+                stmt, err := p.client.GetClient().PreparexContext(ctx, query)
+                if err != nil </span><span class="cov0" title="0">{
+                        return paginator, err
+                }</span>
+                <span class="cov8" title="1">defer stmt.Close()
+
+                rows, err := stmt.Unsafe().QueryxContext(ctx, vals...)
+                if err != nil </span><span class="cov0" title="0">{
+                        return paginator, err
+                }</span>
+                <span class="cov8" title="1">defer rows.Close()
+
+                users, err := p.orm(ctx, rows, &amp;paginator)
+                if err != nil </span><span class="cov0" title="0">{
+                        return paginator, nil
+                }</span>
+
+                <span class="cov8" title="1">paginator.SetDocument(users)
+                return paginator, nil</span>
+        }
+
+        <span class="cov8" title="1">pagiantor, err := execute(ctx, templateDataSQL)
+        if err != nil </span><span class="cov0" title="0">{
+                return pagiantor, err
+        }</span>
+        <span class="cov8" title="1">totalDocuments, err := execute(ctx, templateCountSQL)
+        if err != nil </span><span class="cov0" title="0">{
+                return pagiantor, err
+        }</span>
+
+        <span class="cov8" title="1">pagiantor.SetTotalDocument(totalDocuments.TotalDocument)
+        return pagiantor, nil</span>
+}
+
+func (p psqlRepository) orm(ctx context.Context, rows *sqlx.Rows, paginator *models.Paginator[[]*models.User]) ([]*models.User, error) <span class="cov8" title="1">{
+        var ptrs = make([]*models.User, 0)
+        type tmp struct {
+                TotalDocument zero.Int64 `db:"total_documents"`
+                models.User
+        }
+
+        for rows.Next() </span><span class="cov8" title="1">{
+                var ptr = tmp{}
+                if err := rows.StructScan(&amp;ptr); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+
+                <span class="cov8" title="1">if paginator != nil </span><span class="cov8" title="1">{
+                        paginator.SetTotalDocument(ptr.TotalDocument.ValueOrZero())
+                }</span>
+
+                <span class="cov8" title="1">ptrs = append(ptrs, &amp;ptr.User)</span>
+        }
+
+        <span class="cov8" title="1">if paginator != nil </span><span class="cov8" title="1">{
+                paginator.SetDocument(paginator.Documents)
+        }</span>
+
+        <span class="cov8" title="1">return ptrs, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package user defines the use-case layer for user operations.
+// It depends on a Repository interface so that real and mock
+// implementations can be swapped during testing.
+package user
+
+import (
+        "context"
+        "errors"
+
+        "example/constants"
+        "example/models"
+
+        "github.com/google/uuid"
+)
+
+// userUsecase implements the Usecase interface using a Repository for data access.
+type userUsecase struct {
+        repo Repository // injected dependency; nil-safe validation is done in each method
+}
+
+// NewUserUsecase constructs a new Usecase with the given repository.
+// Pass a mock Repository in tests to isolate business logic from data access.
+func NewUserUsecase(repo Repository) Usecase <span class="cov8" title="1">{
+        return &amp;userUsecase{repo: repo}
+}</span>
+
+// GetUserByID validates the ID and retrieves a single user via the repository.
+func (s *userUsecase) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) <span class="cov8" title="1">{
+        return s.repo.FindByID(ctx, id.String())
+}</span>
+
+// ListUsers delegates to the repository and returns all users.
+func (s *userUsecase) ListUsers(ctx context.Context, params ListParams) (models.Paginator[[]*models.User], error) <span class="cov8" title="1">{
+        return s.repo.List(ctx, params)
+}</span>
+
+func (s *userUsecase) Save(ctx context.Context, user *models.User) error <span class="cov8" title="1">{
+        existsUser, err := s.repo.FindByID(ctx, user.Email.ValueOrZero())
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if existsUser != nil </span><span class="cov8" title="1">{
+                return errors.New(string(constants.ApplicationCodeConflictUserEmailWasDuplicate))
+        }</span>
+        <span class="cov8" title="1">return s.repo.Save(ctx, user)</span>
+}
+
+// Delete removes a user by their ID. Returns an error if the user does not exist.
+func (s *userUsecase) Delete(ctx context.Context, id uuid.UUID) error <span class="cov8" title="1">{
+        user, err := s.repo.FindByID(ctx, id.String())
+        if err != nil </span><span class="cov8" title="1">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if user == nil </span><span class="cov8" title="1">{
+                return errors.New(string(constants.ApplicationCodeConflictUserAlreadyRemoved))
+        }</span>
+        <span class="cov8" title="1">return s.repo.Delete(ctx, id)</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package web
+
+import (
+        "example/constants"
+        "example/middleware"
+        "example/models"
+        "example/service/user"
+        "fmt"
+        "net/http"
+        "strings"
+
+        "github.com/BlackMocca/utils/fn"
+        utilModels "github.com/BlackMocca/utils/models"
+        "github.com/google/uuid"
+        "github.com/labstack/echo/v4"
+)
+
+type handler struct {
+        userUs user.Usecase
+}
+
+func NewHandler(userUs user.Usecase) ServerInterface <span class="cov8" title="1">{
+        return &amp;handler{userUs: userUs}
+}</span>
+
+// ตรวจสอบสถานะของ API service
+// (GET /api/health)
+func (h handler) HealthCheck(ctx echo.Context) error <span class="cov8" title="1">{
+        return middleware.NewResponseJSON(nil)
+}</span>
+
+// ดึงรายการผู้ใช้ทั้งหมด
+// (GET /api/v1/users)
+func (h handler) ListUsers(ctx echo.Context, params ListUsersParams) error <span class="cov8" title="1">{
+        args, err := fn.ConvertStruct[ListUsersParams, user.ListParams](params)
+        if err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInvalidArgument, err.Error(), params)
+        }</span>
+
+        <span class="cov8" title="1">paginator, err := h.userUs.ListUsers(ctx.Request().Context(), args)
+        if err != nil </span><span class="cov8" title="1">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">if len(paginator.Documents) == 0 </span><span class="cov8" title="1">{
+                return middleware.NewResponseNoContent()
+        }</span>
+
+        <span class="cov8" title="1">resp := ListUsersSuccess{}
+        if err := fn.CopyJSON(paginator, &amp;resp.Data); err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">return middleware.NewResponseJSON(resp.Data)</span>
+}
+
+// สร้างผู้ใช้ใหม่
+// (POST /api/v1/users)
+func (h handler) CreateUser(ctx echo.Context) error <span class="cov8" title="1">{
+        var rawctx = ctx.Request().Context()
+        var reqBody = UpdateUserByIDJSONRequestBody{}
+        if err := ctx.Bind(&amp;reqBody); err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationCodeBadRequestInvalidArgument, constants.ApplicationErrorInvalidArgument, err.Error(), nil)
+        }</span>
+
+        <span class="cov8" title="1">var user = new(models.User)
+        user.ID = uuid.New()
+        if err := fn.CopyJSON(reqBody, user); err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInvalidArgument, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">var permissions = make([]*models.Permission, 0, len(reqBody.PermissionIds))
+        for _, permisId := range reqBody.PermissionIds </span><span class="cov0" title="0">{
+                permissions = append(permissions, &amp;models.Permission{Id: uuid.MustParse(permisId.String())})
+        }</span>
+        <span class="cov8" title="1">user.Permissions.Set(permissions)
+        user.CreatedAt = utilModels.NewTimestampFromNow().ToPointer()
+        user.UpdatedAt = utilModels.NewTimestampFromNow().ToPointer()
+
+        if err := h.userUs.Save(rawctx, user); err != nil </span><span class="cov8" title="1">{
+                if strings.EqualFold(err.Error(), string(constants.ApplicationCodeConflictUserEmailWasDuplicate)) </span><span class="cov8" title="1">{
+                        return middleware.NewResponseError(http.StatusConflict, constants.ApplicationCodeConflictUserEmailWasDuplicate, constants.ApplicationErrorConflict, fmt.Sprintf("email %s was duplicated", user.Email.ValueOrZero()), nil)
+                }</span>
+                <span class="cov8" title="1">return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)</span>
+        }
+
+        <span class="cov8" title="1">resp := GetUserByIDSuccess{}
+        fn.CopyJSON(user, &amp;resp.Data)
+        return middleware.NewResponseJSON(resp.Data)</span>
+}
+
+// ลบผู้ใช้
+// (DELETE /api/v1/users/{id})
+func (h handler) DeleteUserByID(ctx echo.Context, id DocumentID) error <span class="cov8" title="1">{
+        var rawctx = ctx.Request().Context()
+
+        if err := h.userUs.Delete(rawctx, id); err != nil </span><span class="cov8" title="1">{
+                if strings.EqualFold(err.Error(), string(constants.ApplicationCodeConflictUserAlreadyRemoved)) </span><span class="cov8" title="1">{
+                        return middleware.NewResponseError(http.StatusConflict, constants.ApplicationCodeConflictUserAlreadyRemoved, constants.ApplicationErrorConflict, fmt.Sprintf("user id already removed: %s", id), nil)
+                }</span>
+                <span class="cov8" title="1">return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)</span>
+        }
+
+        <span class="cov8" title="1">return middleware.NewResponseJSON(nil)</span>
+}
+
+// ดึงข้อมูลผู้ใช้ตาม ID
+// (GET /api/v1/users/{id})
+func (h handler) GetUserByID(ctx echo.Context, id DocumentID) error <span class="cov8" title="1">{
+        user, err := h.userUs.GetUserByID(ctx.Request().Context(), id)
+        if err != nil </span><span class="cov8" title="1">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">if user == nil </span><span class="cov8" title="1">{
+                return middleware.NewResponseNoContent()
+        }</span>
+
+        <span class="cov8" title="1">resp := GetUserByIDSuccess{}
+        fn.CopyJSON(user, &amp;resp.Data)
+        return middleware.NewResponseJSON(resp.Data)</span>
+}
+
+// อัพเดทข้อมูลผู้ใช้
+// (PUT /api/v1/users/{id})
+func (h handler) UpdateUserByID(ctx echo.Context, id DocumentID) error <span class="cov8" title="1">{
+        var rawctx = ctx.Request().Context()
+        var reqBody = UpdateUserByIDJSONRequestBody{}
+        if err := ctx.Bind(&amp;reqBody); err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationCodeBadRequestInvalidArgument, constants.ApplicationErrorInvalidArgument, err.Error(), nil)
+        }</span>
+
+        <span class="cov8" title="1">user, err := h.userUs.GetUserByID(ctx.Request().Context(), id)
+        if err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">if user == nil </span><span class="cov8" title="1">{
+                return middleware.NewResponseNoContent()
+        }</span>
+
+        <span class="cov8" title="1">if err := fn.CopyJSON(reqBody, user); err != nil </span><span class="cov0" title="0">{
+                return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInvalidArgument, err.Error(), nil)
+        }</span>
+        <span class="cov8" title="1">var permissions = make([]*models.Permission, 0, len(reqBody.PermissionIds))
+        for _, permisId := range reqBody.PermissionIds </span><span class="cov8" title="1">{
+                permissions = append(permissions, &amp;models.Permission{Id: uuid.MustParse(permisId.String())})
+        }</span>
+        <span class="cov8" title="1">user.Permissions.Set(permissions)
+        user.UpdatedAt = utilModels.NewTimestampFromNow().ToPointer()
+
+        if err := h.userUs.Save(rawctx, user); err != nil </span><span class="cov8" title="1">{
+                if strings.EqualFold(err.Error(), string(constants.ApplicationCodeConflictUserEmailWasDuplicate)) </span><span class="cov8" title="1">{
+                        return middleware.NewResponseError(http.StatusConflict, constants.ApplicationCodeConflictUserEmailWasDuplicate, constants.ApplicationErrorConflict, fmt.Sprintf("email %s was duplicate", user.Email.ValueOrZero()), nil)
+                }</span>
+                <span class="cov8" title="1">return middleware.NewResponseError(http.StatusInternalServerError, constants.ApplicationInternalServerError, constants.ApplicationErrorInternalServerError, err.Error(), nil)</span>
+        }
+
+        <span class="cov8" title="1">resp := GetUserByIDSuccess{}
+        fn.CopyJSON(user, &amp;resp.Data)
+        return middleware.NewResponseJSON(resp.Data)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Package web provides primitives to interact with the openapi HTTP API.
+//
+// Code generated by github.com/oapi-codegen/oapi-codegen/v2 version v2.6.0 DO NOT EDIT.
+package web
+
+import (
+        "bytes"
+        "compress/gzip"
+        "encoding/base64"
+        "fmt"
+        "net/http"
+        "net/url"
+        "path"
+        "strings"
+
+        "github.com/getkin/kin-openapi/openapi3"
+        uuid "github.com/google/uuid"
+        "github.com/labstack/echo/v4"
+        "github.com/oapi-codegen/runtime"
+        openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+const (
+        ApiKeyAuthScopes = "apiKeyAuth.Scopes"
+)
+
+// Defines values for ApplicationCode.
+const (
+        ApplicationCodeBadRequestInvalidArgument     ApplicationCode = "C40000"
+        ApplicationCodeConflictUserAlreadyRemoved    ApplicationCode = "C40902"
+        ApplicationCodeConflictUserEmailWasDuplicate ApplicationCode = "C40901"
+        ApplicationCodeForbidden                     ApplicationCode = "C40300"
+        ApplicationCodeNotFound                      ApplicationCode = "C40400"
+        ApplicationCodeSuccess                       ApplicationCode = "C20000"
+        ApplicationCodeUnAuthorize                   ApplicationCode = "C40100"
+        ApplicationInternalServerError               ApplicationCode = "C50000"
+)
+
+// Valid indicates whether the value is a known member of the ApplicationCode enum.
+func (e ApplicationCode) Valid() bool <span class="cov0" title="0">{
+        switch e </span>{
+        case ApplicationCodeBadRequestInvalidArgument:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeConflictUserAlreadyRemoved:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeConflictUserEmailWasDuplicate:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeForbidden:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeNotFound:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeSuccess:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationCodeUnAuthorize:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationInternalServerError:<span class="cov0" title="0">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+// Defines values for ApplicationErrorType.
+const (
+        ApplicationErrorApikeyInvalid       ApplicationErrorType = "apikey_invalid"
+        ApplicationErrorConflict            ApplicationErrorType = "conflict"
+        ApplicationErrorInternalServerError ApplicationErrorType = "internal_server_error"
+        ApplicationErrorInvalidArgument     ApplicationErrorType = "invalid_arguments"
+        ApplicationErrorNotFound            ApplicationErrorType = "notfound"
+        ApplicationErrorTokenExpired        ApplicationErrorType = "token_expired"
+        ApplicationErrorTokenSecretMismatch ApplicationErrorType = "token_secret_mismatch"
+)
+
+// Valid indicates whether the value is a known member of the ApplicationErrorType enum.
+func (e ApplicationErrorType) Valid() bool <span class="cov0" title="0">{
+        switch e </span>{
+        case ApplicationErrorApikeyInvalid:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorConflict:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorInternalServerError:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorInvalidArgument:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorNotFound:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorTokenExpired:<span class="cov0" title="0">
+                return true</span>
+        case ApplicationErrorTokenSecretMismatch:<span class="cov0" title="0">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+// Defines values for Role.
+const (
+        RoleAdmin     Role = "admin"
+        RoleModerator Role = "moderator"
+        RoleUser      Role = "user"
+)
+
+// Valid indicates whether the value is a known member of the Role enum.
+func (e Role) Valid() bool <span class="cov0" title="0">{
+        switch e </span>{
+        case RoleAdmin:<span class="cov0" title="0">
+                return true</span>
+        case RoleModerator:<span class="cov0" title="0">
+                return true</span>
+        case RoleUser:<span class="cov0" title="0">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+// Defines values for Status.
+const (
+        StatusActive   Status = "active"
+        StatusInactive Status = "inactive"
+        StatusPending  Status = "pending"
+)
+
+// Valid indicates whether the value is a known member of the Status enum.
+func (e Status) Valid() bool <span class="cov0" title="0">{
+        switch e </span>{
+        case StatusActive:<span class="cov0" title="0">
+                return true</span>
+        case StatusInactive:<span class="cov0" title="0">
+                return true</span>
+        case StatusPending:<span class="cov0" title="0">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+// ApplicationCode ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+type ApplicationCode string
+
+// ApplicationErrorType ErrorType with same http status code and ApplicationCode
+type ApplicationErrorType string
+
+// Role บทบาทของผู้ใช้ในระบบ
+type Role string
+
+// Status สถานะของ entity
+type Status string
+
+// CreateUserEmailDuplicate defines model for create_user_email_duplicate.
+type CreateUserEmailDuplicate struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+
+        // Data returned any data with the response
+        Data interface{} `json:"data,omitempty"`
+
+        // ErrorType ErrorType with same http status code and ApplicationCode
+        ErrorType *ApplicationErrorType `json:"error_type,omitempty"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// CreateUserJSONBody defines model for create_user_json_body.
+type CreateUserJSONBody struct {
+        // Email อีเมลสำหรับเข้าสู่ระบบ
+        Email openapi_types.Email `json:"email"`
+
+        // Name ชื่อ-นามสกุล
+        Name          string `json:"name"`
+        PermissionIds []UUID `json:"permission_ids"`
+
+        // Role บทบาทของผู้ใช้ในระบบ
+        Role Role `json:"role"`
+}
+
+// CreateUserSuccess defines model for create_user_success.
+type CreateUserSuccess struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+        Data User            `json:"data"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// GetUserByIDSuccess defines model for get_user_by_id_success.
+type GetUserByIDSuccess struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+        Data User            `json:"data"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// ListUsersSuccess defines model for list_users_success.
+type ListUsersSuccess struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+        Data struct {
+                Documents []User `json:"documents"`
+
+                // Page The current page number.
+                Page int `json:"page"`
+
+                // PageSize The number of items per page.
+                PageSize int `json:"page_size"`
+
+                // TotalDocuments The total number of items across all pages.
+                TotalDocuments int `json:"total_documents"`
+
+                // TotalPage The total number of pages available.
+                TotalPage int `json:"total_page"`
+        } `json:"data"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// Paginator defines model for paginator.
+type Paginator struct {
+        // Documents definition schemas
+        Documents *[]map[string]interface{} `json:"documents"`
+
+        // Page The current page number.
+        Page int `json:"page"`
+
+        // PageSize The number of items per page.
+        PageSize int `json:"page_size"`
+
+        // TotalDocuments The total number of items across all pages.
+        TotalDocuments int `json:"total_documents"`
+
+        // TotalPage The total number of pages available.
+        TotalPage int `json:"total_page"`
+}
+
+// Permission defines model for permission.
+type Permission struct {
+        CreatedAt Timestamp   `json:"created_at"`
+        ID        interface{} `json:"id"`
+
+        // Name ชื่อสิทธิ์
+        Name      string    `json:"name"`
+        UpdatedAt Timestamp `json:"updated_at"`
+}
+
+// ResponseError defines model for response_error.
+type ResponseError struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+
+        // Data returned any data with the response
+        Data interface{} `json:"data,omitempty"`
+
+        // ErrorType ErrorType with same http status code and ApplicationCode
+        ErrorType *ApplicationErrorType `json:"error_type,omitempty"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// ResponseSuccess defines model for response_success.
+type ResponseSuccess struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+
+        // Data returned any data with the response
+        Data interface{} `json:"data,omitempty"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// Timestamp defines model for timestamp.
+type Timestamp = string
+
+// UpdateUserJSONBody defines model for update_user_json_body.
+type UpdateUserJSONBody struct {
+        // Email อีเมลสำหรับเข้าสู่ระบบ
+        Email openapi_types.Email `json:"email"`
+
+        // Name ชื่อ-นามสกุล
+        Name          string `json:"name"`
+        PermissionIds []UUID `json:"permission_ids"`
+
+        // Role บทบาทของผู้ใช้ในระบบ
+        Role Role `json:"role"`
+}
+
+// UpdateUserSuccess defines model for update_user_success.
+type UpdateUserSuccess struct {
+        // Code ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+        Code ApplicationCode `json:"code"`
+        Data User            `json:"data"`
+
+        // Message Human-readable error message
+        Message string `json:"message"`
+}
+
+// User defines model for user.
+type User struct {
+        CreatedAt Timestamp `json:"created_at"`
+
+        // Email อีเมลสำหรับเข้าสู่ระบบ
+        Email openapi_types.Email `json:"email"`
+        ID    interface{}         `json:"id"`
+
+        // Name ชื่อ-นามสกุล
+        Name        string        `json:"name"`
+        Permissions *[]Permission `json:"permissions,omitempty"`
+
+        // Role บทบาทของผู้ใช้ในระบบ
+        Role Role `json:"role"`
+
+        // Status สถานะของ entity
+        Status    Status    `json:"status"`
+        UpdatedAt Timestamp `json:"updated_at"`
+}
+
+// UUID defines model for uuid.
+type UUID = uuid.UUID
+
+// DocumentID defines model for document_id.
+type DocumentID = UUID
+
+// Page defines model for page.
+type Page = int32
+
+// PageSize defines model for page_size.
+type PageSize = int32
+
+// SearchWord defines model for search_word.
+type SearchWord = string
+
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+        // Page หน้าที่ต้องการ (เริ่มจาก 1)
+        Page Page `form:"page" json:"page"`
+
+        // PageSize จำนวนรายการต่อหน้า
+        PageSize PageSize `form:"page_size" json:"page_size"`
+
+        // SearchWord ค้นหาจากข้อความ
+        SearchWord *SearchWord `form:"search_word,omitempty" json:"search_word,omitempty"`
+
+        // Role filtering user from role
+        Role *Role `form:"role,omitempty" json:"role,omitempty"`
+}
+
+// CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
+type CreateUserJSONRequestBody = CreateUserJSONBody
+
+// UpdateUserByIDJSONRequestBody defines body for UpdateUserByID for application/json ContentType.
+type UpdateUserByIDJSONRequestBody = UpdateUserJSONBody
+
+// ServerInterface represents all server handlers.
+type ServerInterface interface {
+        // ตรวจสอบสถานะของ API service
+        // (GET /api/health)
+        HealthCheck(ctx echo.Context) error
+        // ดึงรายการผู้ใช้ทั้งหมด
+        // (GET /api/v1/users)
+        ListUsers(ctx echo.Context, params ListUsersParams) error
+        // สร้างผู้ใช้ใหม่
+        // (POST /api/v1/users)
+        CreateUser(ctx echo.Context) error
+        // ลบผู้ใช้
+        // (DELETE /api/v1/users/{id})
+        DeleteUserByID(ctx echo.Context, id DocumentID) error
+        // ดึงข้อมูลผู้ใช้ตาม ID
+        // (GET /api/v1/users/{id})
+        GetUserByID(ctx echo.Context, id DocumentID) error
+        // อัพเดทข้อมูลผู้ใช้
+        // (PUT /api/v1/users/{id})
+        UpdateUserByID(ctx echo.Context, id DocumentID) error
+}
+
+// ServerInterfaceWrapper converts echo contexts to parameters.
+type ServerInterfaceWrapper struct {
+        Handler ServerInterface
+}
+
+// HealthCheck converts echo context to params.
+func (w *ServerInterfaceWrapper) HealthCheck(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+
+        // Invoke the callback with all the unmarshaled arguments
+        err = w.Handler.HealthCheck(ctx)
+        return err
+}</span>
+
+// ListUsers converts echo context to params.
+func (w *ServerInterfaceWrapper) ListUsers(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+
+        ctx.Set(ApiKeyAuthScopes, []string{})
+
+        // Parameter object where we will unmarshal all parameters from the context
+        var params ListUsersParams
+        // ------------- Required query parameter "page" -------------
+
+        err = runtime.BindQueryParameterWithOptions("form", true, true, "page", ctx.QueryParams(), &amp;params.Page, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter page: %s", err))
+        }</span>
+
+        // ------------- Required query parameter "page_size" -------------
+
+        <span class="cov0" title="0">err = runtime.BindQueryParameterWithOptions("form", true, true, "page_size", ctx.QueryParams(), &amp;params.PageSize, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter page_size: %s", err))
+        }</span>
+
+        // ------------- Optional query parameter "search_word" -------------
+
+        <span class="cov0" title="0">err = runtime.BindQueryParameterWithOptions("form", true, false, "search_word", ctx.QueryParams(), &amp;params.SearchWord, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter search_word: %s", err))
+        }</span>
+
+        // ------------- Optional query parameter "role" -------------
+
+        <span class="cov0" title="0">err = runtime.BindQueryParameterWithOptions("form", true, false, "role", ctx.QueryParams(), &amp;params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter role: %s", err))
+        }</span>
+
+        // Invoke the callback with all the unmarshaled arguments
+        <span class="cov0" title="0">err = w.Handler.ListUsers(ctx, params)
+        return err</span>
+}
+
+// CreateUser converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateUser(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+
+        ctx.Set(ApiKeyAuthScopes, []string{})
+
+        // Invoke the callback with all the unmarshaled arguments
+        err = w.Handler.CreateUser(ctx)
+        return err
+}</span>
+
+// DeleteUserByID converts echo context to params.
+func (w *ServerInterfaceWrapper) DeleteUserByID(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+        // ------------- Path parameter "id" -------------
+        var id DocumentID
+
+        err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &amp;id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+        }</span>
+
+        <span class="cov0" title="0">ctx.Set(ApiKeyAuthScopes, []string{})
+
+        // Invoke the callback with all the unmarshaled arguments
+        err = w.Handler.DeleteUserByID(ctx, id)
+        return err</span>
+}
+
+// GetUserByID converts echo context to params.
+func (w *ServerInterfaceWrapper) GetUserByID(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+        // ------------- Path parameter "id" -------------
+        var id DocumentID
+
+        err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &amp;id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+        }</span>
+
+        <span class="cov0" title="0">ctx.Set(ApiKeyAuthScopes, []string{})
+
+        // Invoke the callback with all the unmarshaled arguments
+        err = w.Handler.GetUserByID(ctx, id)
+        return err</span>
+}
+
+// UpdateUserByID converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateUserByID(ctx echo.Context) error <span class="cov0" title="0">{
+        var err error
+        // ------------- Path parameter "id" -------------
+        var id DocumentID
+
+        err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &amp;id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+        if err != nil </span><span class="cov0" title="0">{
+                return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+        }</span>
+
+        <span class="cov0" title="0">ctx.Set(ApiKeyAuthScopes, []string{})
+
+        // Invoke the callback with all the unmarshaled arguments
+        err = w.Handler.UpdateUserByID(ctx, id)
+        return err</span>
+}
+
+// This is a simple interface which specifies echo.Route addition functions which
+// are present on both echo.Echo and echo.Group, since we want to allow using
+// either of them for path registration
+type EchoRouter interface {
+        CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        HEAD(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        OPTIONS(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+        TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+}
+
+// RegisterHandlers adds each server route to the EchoRouter.
+func RegisterHandlers(router EchoRouter, si ServerInterface) <span class="cov0" title="0">{
+        RegisterHandlersWithBaseURL(router, si, "")
+}</span>
+
+// Registers handlers, and prepends BaseURL to the paths, so that the paths
+// can be served under a prefix.
+func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL string) <span class="cov0" title="0">{
+
+        wrapper := ServerInterfaceWrapper{
+                Handler: si,
+        }
+
+        router.GET(baseURL+"/api/health", wrapper.HealthCheck)
+        router.GET(baseURL+"/api/v1/users", wrapper.ListUsers)
+        router.POST(baseURL+"/api/v1/users", wrapper.CreateUser)
+        router.DELETE(baseURL+"/api/v1/users/:id", wrapper.DeleteUserByID)
+        router.GET(baseURL+"/api/v1/users/:id", wrapper.GetUserByID)
+        router.PUT(baseURL+"/api/v1/users/:id", wrapper.UpdateUserByID)
+
+}</span>
+
+// Base64 encoded, gzipped, json marshaled Swagger object
+var swaggerSpec = []string{
+
+        "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",
+        "AAAA///KT8ERCjAAAA==",
+}
+
+// GetSwagger returns the content of the embedded swagger specification file
+// or error if failed to decode
+func decodeSpec() ([]byte, error) <span class="cov8" title="1">{
+        zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error base64 decoding spec: %w", err)
+        }</span>
+        <span class="cov8" title="1">zr, err := gzip.NewReader(bytes.NewReader(zipped))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error decompressing spec: %w", err)
+        }</span>
+        <span class="cov8" title="1">var buf bytes.Buffer
+        _, err = buf.ReadFrom(zr)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("error decompressing spec: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return buf.Bytes(), nil</span>
+}
+
+var rawSpec = decodeSpecCached()
+
+// a naive cached of a decoded swagger spec
+func decodeSpecCached() func() ([]byte, error) <span class="cov8" title="1">{
+        data, err := decodeSpec()
+        return func() ([]byte, error) </span><span class="cov0" title="0">{
+                return data, err
+        }</span>
+}
+
+// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
+func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) <span class="cov0" title="0">{
+        res := make(map[string]func() ([]byte, error))
+        if len(pathToFile) &gt; 0 </span><span class="cov0" title="0">{
+                res[pathToFile] = rawSpec
+        }</span>
+
+        <span class="cov0" title="0">return res</span>
+}
+
+// GetSwagger returns the Swagger specification corresponding to the generated code
+// in this file. The external references of Swagger specification are resolved.
+// The logic of resolving external references is tightly connected to "import-mapping" feature.
+// Externally referenced files must be embedded in the corresponding golang packages.
+// Urls can be supported but this task was out of the scope.
+func GetSwagger() (swagger *openapi3.T, err error) <span class="cov0" title="0">{
+        resolvePath := PathToRawSpec("")
+
+        loader := openapi3.NewLoader()
+        loader.IsExternalRefsAllowed = true
+        loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) </span><span class="cov0" title="0">{
+                pathToFile := url.String()
+                pathToFile = path.Clean(pathToFile)
+                getSpec, ok := resolvePath[pathToFile]
+                if !ok </span><span class="cov0" title="0">{
+                        err1 := fmt.Errorf("path not found: %s", pathToFile)
+                        return nil, err1
+                }</span>
+                <span class="cov0" title="0">return getSpec()</span>
+        }
+        <span class="cov0" title="0">var specData []byte
+        specData, err = rawSpec()
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">swagger, err = loader.LoadFromData(specData)
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">return</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

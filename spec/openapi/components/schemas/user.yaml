@@ -1,0 +1,26 @@
+# User schema
+type: object
+required: [id, email, name, status, role]
+properties:
+  id:
+    $ef: '../../global/components/schemas/uuid.yaml'
+  email:
+    type: string
+    format: email
+    description: อีเมลสำหรับเข้าสู่ระบบ
+  name:
+    type: string
+    maxLength: 100
+    description: ชื่อ-นามสกุล
+  status:
+    $ref: '../../enums.yaml#/components/schemas/Status'
+  role:
+    $ref: '../../enums.yaml#/components/schemas/Role'
+  created_at:
+    $ref: '../../global/components/schemas/timestamp.yaml'
+  updated_at:
+    $ref: '../../global/components/schemas/timestamp.yaml'
+  permissions:
+    type: array
+    items:
+      $ref: ./permission.yml

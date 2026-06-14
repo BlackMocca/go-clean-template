@@ -1,0 +1,9 @@
+# page.yaml — reusable pagination parameter
+name: page
+in: query
+description: หน้าที่ต้องการ (เริ่มจาก 1)
+required: true
+schema:
+  type: integer
+  format: int32
+  default: 1

@@ -1,0 +1,86 @@
+# enums.yaml — Enum definitions ทั้งหมด (ใช้ x-enum-varnames)
+components:
+  schemas:
+    ApplicationCode:
+      type: string
+      enum: [C20000, C40000, C40100, C40300, C40400, C50000, C40901, C40902]
+      description: ApplicationCode (CXXXYYY, XXX=HTTPStatusCode, YY=ErrorCode)
+      example: 'C20000'
+      x-enum-varnames:
+        - ApplicationCodeSuccess
+        - ApplicationCodeBadRequestInvalidArgument
+        - ApplicationCodeUnAuthorize
+        - ApplicationCodeForbidden
+        - ApplicationCodeNotFound
+        - ApplicationInternalServerError
+        - ApplicationCodeConflictUserEmailWasDuplicate
+        - ApplicationCodeConflictUserAlreadyRemoved
+
+    ApplicationErrorType:
+      type: string
+      enum: [
+        invalid_arguments,
+        conflict,
+        internal_server_error,
+        notfound,
+        apikey_invalid,
+        token_expired,
+        token_secret_mismatch
+      ]
+      description: ErrorType with same http status code and ApplicationCode
+      example: 'unknown'
+      x-enum-varnames:
+        - ApplicationErrorInvalidArgument
+        - ApplicationErrorConflict
+        - ApplicationErrorInternalServerError
+        - ApplicationErrorNotFound
+        - ApplicationErrorApikeyInvalid
+        - ApplicationErrorTokenExpired
+        - ApplicationErrorTokenSecretMismatch
+
+    Status:
+      type: string
+      enum: [active, inactive, pending]
+      description: สถานะของ entity
+      x-enum-varnames:
+        - StatusActive
+        - StatusInactive
+        - StatusPending
+
+    Role:
+      type: string
+      enum: [admin, user, moderator]
+      description: บทบาทของผู้ใช้ในระบบ
+      x-enum-varnames:
+        - RoleAdmin
+        - RoleUser
+        - RoleModerator
+
+    Priority:
+      type: string
+      enum: [low, medium, high, critical]
+      description: ระดับความสำคัญ (ใช้กับ task/ticket)
+      x-enum-varnames:
+        - PriorityLow
+        - PriorityMedium
+        - PriorityHigh
+        - PriorityCritical
+
+    UserType:
+      type: string
+      enum: [student, alumni]
+      description: ประเภทของผู้ใช้ (มี custom Go constant names)
+      x-enum-varnames:
+        - UserTypeStudent
+        - UserTypeAlumni
+
+    HttpMethod:
+      type: string
+      enum: [get, post, put, patch, delete]
+      description: HTTP method สำหรับ routing log
+      x-enum-varnames:
+        - HttpMethodGet
+        - HttpMethodPost
+        - HttpMethodPut
+        - HttpMethodPatch
+        - HttpMethodDelete

@@ -1,0 +1,12 @@
+package: constants
+
+generate:
+  echo-server: false
+  models: true
+  client: false
+  embedded-spec: false
+
+output: enum.gen.go
+output-options:
+  skip-prune: true
+  name-normalizer: ToCamelCaseWithInitialisms

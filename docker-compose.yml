@@ -1,0 +1,15 @@
+version: "3"
+
+services: 
+  go-clean-arch:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    container_name: go-clean-arch
+    env_file: .env
+    networks: 
+      - default
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/go/src/application

@@ -1,0 +1,12 @@
+package: web
+
+generate:
+  echo-server: true
+  models: true
+  client: false
+  embedded-spec: true
+
+output: server.gen.go
+output-options:
+  skip-prune: false
+  name-normalizer: ToCamelCaseWithInitialisms

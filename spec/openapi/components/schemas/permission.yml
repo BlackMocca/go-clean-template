@@ -1,0 +1,14 @@
+# User schema
+type: object
+required: [id, name]
+properties:
+  id:
+    $ef: '../../global/components/schemas/uuid.yaml'
+  name:
+    type: string
+    maxLength: 100
+    description: ชื่อสิทธิ์
+  created_at:
+    $ref: '../../global/components/schemas/timestamp.yaml'
+  updated_at:
+    $ref: '../../global/components/schemas/timestamp.yaml'

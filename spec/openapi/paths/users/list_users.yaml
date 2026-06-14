@@ -1,0 +1,32 @@
+# list_users.yaml — GET /users (operation object only, no top-level key)
+operationId: ListUsers
+tags: [Users]
+summary: ดึงรายการผู้ใช้ทั้งหมด
+parameters:
+  - $ref: '../../global/components/parameters/page.yaml'
+  - $ref: '../../global/components/parameters/page_size.yaml'
+  - $ref: '../../components/parameters/search_word.yaml'
+  - $ref: '../../components/parameters/role.yaml'
+security:
+  - apiKeyAuth: []
+responses:
+  '200':
+    description: รายการผู้ใช้ที่ถูกต้อง
+    content:
+      application/json:
+        schema:
+          $ref: './response/list_users_success.yaml'
+
+  '204':
+    description: ไม่พบผู้ใช้ที่ระบุ
+
+  '401':
+    description: Unauthorized
+    content:
+      application/json:
+        schema: { $ref: '../../global/components/schemas/response_error.yaml' }
+  '500':
+    description: Internal ServerError
+    content:
+      application/json:
+        schema: { $ref: '../../global/components/schemas/response_error.yaml' }

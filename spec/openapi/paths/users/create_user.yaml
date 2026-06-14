@@ -1,0 +1,45 @@
+# create_user.yaml — POST /users (operation object only)
+operationId: CreateUser
+tags: [Users]
+summary: สร้างผู้ใช้ใหม่
+security:
+  - apiKeyAuth: []
+requestBody:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: './request/create_user_json_body.yaml'
+responses:
+  '200':
+    description: สร้างผู้ใช้สำเร็จ
+    content:
+      application/json:
+        schema:
+          $ref: './response/create_user_success.yaml'
+  '400':
+    description: ข้อมูลไม่ถูกต้อง
+    content:
+      application/json:
+        schema: 
+          $ref: '../../global/components/schemas/response_error.yaml'
+  '401':
+    description: Unauthorized
+    content:
+      application/json:
+        schema: 
+          $ref: '../../global/components/schemas/response_error.yaml'
+
+  '409':
+    description: user email was duplicate
+    content:
+      application/json:
+        schema: 
+          $ref: './response/create_user_email_duplicate.yaml'
+
+  '500':
+    description: Internal ServerError
+    content:
+      application/json:
+        schema: 
+          $ref: '../../global/components/schemas/response_error.yaml'

@@ -1,0 +1,14 @@
+type: object
+required: [code, message]
+properties:
+  code: 
+    $ref: '../../../enums.yaml#/components/schemas/ApplicationCode'
+  error_type:
+    $ref: '../../../enums.yaml#/components/schemas/ApplicationErrorType'
+  message:
+    type: string
+    description: Human-readable error message
+  data:
+    addtionalProperties: true
+    nullable: true
+    description: returned any data with the response

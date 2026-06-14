@@ -1,0 +1,7 @@
+# role.yaml — reusable path ID parameter
+name: role
+in: query
+required: false
+description: filtering user from role
+schema:
+  $ref: '../../enums.yaml#/components/schemas/Role'

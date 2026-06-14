@@ -1,0 +1,28 @@
+openapi: "3.0.3"
+
+info:
+  title: Example API (OpenAPI v3)
+  version: "1.0.0"
+  description: OpenAPI spec example with one-file-per-operation pattern. Generated Echo server code + models using oapi-codegen.
+
+tags:
+  - name: public
+    description: does not any authentication
+  - name: Users
+    description: User management endpoints
+
+components:
+  securitySchemes:
+    apiKeyAuth: { $ref: './global/components/securitySchemes/apikey.yaml' }
+    bearerAuth: { $ref: './global/components/securitySchemes/jwt.yaml' }
+
+paths:
+  /api/health:
+    get: { $ref: './paths/public/health.yaml' }
+  /api/v1/users:
+    get: { $ref: './paths/users/list_users.yaml' }
+    post: { $ref: './paths/users/create_user.yaml' }
+  /api/v1/users/{id}:
+    get: { $ref: './paths/users/get_user_by_id.yaml' }
+    put: { $ref: './paths/users/update_user.yaml' }
+    delete: { $ref: './paths/users/delete_user.yaml' }

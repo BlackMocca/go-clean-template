@@ -1,0 +1,7 @@
+# search_word.yaml — input text for search email pattern %like%
+name: search_word
+in: query
+required: false
+description: ค้นหาจากข้อความ
+schema:
+  type: string

@@ -1,0 +1,21 @@
+# Mockery configuration for Go modules
+# Each package key must be a fully qualified import path (module + relative path)
+all: true
+dir: "{{.InterfaceDir}}/mocks"
+filename: "{{.InterfaceName}}.go"
+force-file-write: true
+formatter: goimports
+log-level: info
+structname: 'Mock{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}_test'
+recursive: false
+require-template-schema-exists: true
+template: testify
+template-schema: '{{.Template}}.schema.json'
+
+packages:
+  # Format: <module_path>
+  example:
+    config:
+      recursive: true
+      all: true

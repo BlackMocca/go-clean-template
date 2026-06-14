@@ -1,0 +1,10 @@
+# page_size.yaml — reusable pagination parameter
+name: page_size
+in: query
+description: จำนวนรายการต่อหน้า
+required: true
+schema:
+  type: integer
+  format: int32
+  default: 20
+  maximum: 100

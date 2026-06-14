@@ -1,0 +1,7 @@
+type: string 
+format: uuid 
+x-omitempty: false
+x-go-type: uuid.UUID
+x-go-type-import:
+  path: github.com/google/uuid
+  name: uuid
