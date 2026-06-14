@@ -26,14 +26,17 @@ example/
 │   │   ├── generate.go          ← //go:generate (oapi-codegen for Echo server)
 │   │   ├── server.cfg.yaml      ← oapi-codegen config (echo-server + models + embedded-spec)
 │   │   ├── server.gen.go        ← Generated: ServerInterface, parameter types, body types
-│   │   └── handlers.go          ← Implements ServerInterface → delegates to usecase layer
+│   │   ├── handlers.go          ← Implements ServerInterface → delegates to usecase layer
+│   │   └── handlers_test.go     ← Handler unit tests (httptest + mock Usecase)
 │   │
 │   └── user/                    ← Domain service (user management)
 │       ├── types.go             ← Repository & Usecase interfaces + ListParams
 │       ├── usecase.go           ← Business logic: email-duplicate check, delete validation
 │       ├── psql_repository.go   ← PostgreSQL implementation via sqlx (transactions, soft-delete)
-│       └── mocks/               ← Auto-generated mocks for testing (via mockery)
-│
+│       ├── psql_repository_test.go      ← Repository integration tests
+│       ├── psql_repository_suit_test.go ← Test suite setup
+│       ├── usecase_test.go      ← Usecase unit tests (mock Repository)
+│       └── mocks/               ← Auto-generated mocks via mockery (Repository, Usecase)
 ├── models/
 │   ├── user.go                  ← User domain type (uses BlackMocca utils: Timestamp, EnumScan, JsonScan)
 │   ├── permission.go            ← Permission entity + Permissions slice helper
@@ -48,15 +51,30 @@ example/
 │   ├── migrate.go               ← Dual-track migration runner (schema + seed data)
 │   └── database/postgres/       ← Migration SQL files
 │       ├── schema_migrations/   ← 000001–000004: extensions, permissions, users, user_permissions (up/down)
-│       └── master/              ← 000001: seed default permissions (up only)
+│       │   ├── 000001_extension.up.sql / .down.sql
+│       │   ├── 000002_create_permissions_table.up.sql / .down.sql
+│       │   ├── 000003_create_users.up.sql / .down.sql
+│       │   └── 000004_create_user_permissions.up.sql / .down.sql
+│       └── master/              ← Seed data (up only, no down)
+│           └── 000001_permission.up.sql
 │
 ├── spec/openapi/                ← OpenAPI v3 specification (source of truth!)
 │   ├── openapi.yaml             ← Entry point: paths $ref, components, securitySchemes
 │   ├── enums.yaml               ← Enum definitions with x-enum-varnames
-│   └── ...                      ← One-file-per-operation pattern for all endpoints
+│   ├── global/components/       ← Shared schemas across all APIs
+│   │   ├── parameters/          ← page, page_size, document_id
+│   │   ├── schemas/             ← uuid.yaml, timestamp.yaml, paginator.yaml, response_success.yaml, response_error.yaml
+│   │   └── securitySchemes/     ← apikey.yaml, jwt.yaml
+│   ├── components/              ← Domain-specific (this API only)
+│   │   ├── parameters/          ← role, search_word
+│   │   └── schemas/             ← user.yaml, permission.yml
+│   └── paths/                   ← One-file-per-operation pattern
+│       ├── public/              ← health.yaml (GET /api/health)
+│       └── users/               ← CRUD operations + request/response subdirectories
 │
 ├── .env                         ← Local environment overrides
 ├── .env.example                 ← Environment variable reference
+├── .mockery.yml                 ← Mockery configuration (auto-generates mocks)
 ├── Dockerfile                   ← Multi-stage build (golang → alpine)
 └── docker-compose.yml           ← Dev environment (app + postgres)
 ```
@@ -77,7 +95,7 @@ graph LR
     H --> I[Running Server]
 ```
 
-### Three Steps
+### Five Steps
 
 1. **Write OpenAPI spec** — Define routes, schemas, enums, security schemes under `spec/openapi/`. The spec is the single source of truth.
 
@@ -94,6 +112,10 @@ graph LR
    ```
 
 3. **Implement handlers** — Build structs that implement `ServerInterface` with business logic, delegating to usecase and repository layers.
+
+4. **Register routes manually** — Separate public (no auth) from protected (API Key) endpoints in `route/web.go`. Wrap the handler with `ServerInterfaceWrapper` for parameter binding.
+
+5. **Transform responses** — All handlers return `middleware.Response` which is transformed by the `TransformResponse` middleware into JSON HTTP responses.
 
 > 💡 The `generate.go` files in each package use **relative paths** to spec files:
 > - `service/web/generate.go` → `../../spec/openapi/openapi_bundle.yaml` (2 levels up)
@@ -198,6 +220,105 @@ curl -X DELETE http://localhost:3001/api/v1/users/{id} \
   -H "X-API-Key: exampleapikey"
 # Returns the updated user with deleted_at set, status 200
 ```
+
+---
+
+## 🧪 Unit Testing
+
+### Mock Generation
+
+Mocks are auto-generated via [mockery](https://github.com/vektra/mockery) configured in `.mockery.yml`:
+
+```bash
+make gen-interface        # generates mocks into service/*/mocks/
+```
+
+Mocks are generated for interfaces defined in `service/user/types.go` (`Repository`, `Usecase`) into `service/user/mocks/`.
+
+### Running Tests
+
+```bash
+make test-unit            # runs all *_test.go, generates cover.out + coverage.html
+```
+
+The Makefile automatically discovers test directories, excludes mocks/generated files, and reports coverage percentage.
+
+### Handler Testing Pattern
+
+Handlers return `error` but the value is always a `middleware.Response` struct. Test pattern:
+
+```go
+type middleware.Response struct {
+    HttpStatus   int                 \`json:"-"\`
+    ResponseCode constants.ApplicationCode  \`json:"code"\`
+    ErrorType    constants.ApplicationErrorType \`json:"error_type,omitempty"\`
+    Message      string              \`json:"message"\`
+    Data         interface{}         \`json:"data"\`
+}
+```
+
+Extract and assert every field:
+```go
+func extractResponse(t *testing.T, handlerErr error) middleware.Response {
+    resp, ok := handlerErr.(middleware.Response)
+    require.True(t, ok, "expected middleware.Response but got %T", handlerErr)
+    return resp
+}
+
+resp := extractResponse(t, handlerErr)
+assert.Equal(t, http.StatusOK, resp.HttpStatus)
+assert.Equal(t, constants.ApplicationCodeSuccess, resp.ResponseCode)
+```
+
+Use `.Run(func(ctx, params) { ... })` to inspect arguments passed to mocks.
+
+### Usecase Testing Pattern
+
+Usecases depend on Repository interface — mock it with testify:
+```go
+mockRepo := mocks.NewMockRepository(t)
+uc := user.NewUserUsecase(mockRepo)
+
+mockRepo.EXPECT().FindByID(mock.Anything, id.String()).
+    Run(func(ctx context.Context, idStr string) {
+        assert.Equal(t, "expected-id", idStr)
+    }).Return(user, nil)
+```
+
+For multi-step operations (e.g., Delete: FindByID → check → Delete), define expectations in call order and verify counts:
+```go
+mockRepo.AssertNumberOfCalls(t, "FindByID", 1)
+mockRepo.AssertNumberOfCalls(t, "Save", 0)  // not called because error occurred earlier
+```
+
+---
+
+## 🗄️ Migrations (Dual-Track Pattern)
+
+This project uses **two independent migration tracks** with separate tracking tables:
+
+| Track | Directory | Tracking Table | Direction | Purpose |
+|-------|-----------|----------------|-----------|---------|
+| Schema migrations | `database/postgres/schema_migrations/` | `schema_migrations` (per-schema) | Up + Down | CREATE/DROP/ALTER tables and columns |
+| Seed data (master) | `database/postgres/master/` | `seed_migrations` (per-schema) | Up only | INSERT reference data, defaults, lookups |
+
+**Why dual track?**
+- Schema migrations must run **before** seed data (you can't INSERT into a table that doesn't exist yet)
+- Seed data uses `ON CONFLICT DO NOTHING` — idempotent and safe to rerun
+- Schema migrations are fully reversible (.down.sql for each .up.sql)
+- Seed data is NOT reversed (no .down.sql files in master/)
+
+**Migration file naming:**
+| Pattern | Example | Description |
+|---------|---------|-------------|
+| `000001_extension.up.sql` / `.down.sql` | ✅ | Schema migration — numbered, reversible |
+| `000001_permission.up.sql` (no .down.sql) | ✅ | Seed data — up only in master/ directory |
+
+**Rules:**
+- [ ] Schema migrations are reversible with corresponding .down.sql files
+- [ ] Seed data uses `ON CONFLICT DO NOTHING` for idempotent reruns
+- [ ] Migrations ordered by dependency (extensions → tables → indexes)
+- [ ] Each track uses its own migrations table: `schema_migrations` vs `seed_migrations`
 
 ---
 
